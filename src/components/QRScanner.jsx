@@ -59,14 +59,27 @@ function QRScanner({ onScan, onClose }) {
           return;
         }
         
-        // DOM 요소가 존재하는지 확인
-        const qrReaderElement = document.getElementById('qr-reader');
-        console.log('🔍 [QRScanner] QR reader element:', qrReaderElement);
+        // DOM 요소가 존재하는지 확인하고 안정화 대기
+        let qrReaderElement = document.getElementById('qr-reader');
+        let attempts = 0;
+        const maxAttempts = 10;
+        
+        while (!qrReaderElement && attempts < maxAttempts && isMounted) {
+          console.log(`🔍 [QRScanner] Waiting for DOM element... attempt ${attempts + 1}`);
+          await new Promise(resolve => setTimeout(resolve, 100));
+          qrReaderElement = document.getElementById('qr-reader');
+          attempts++;
+        }
         
         if (!qrReaderElement || !isMounted) {
-          console.log('⚠️ [QRScanner] QR reader element not found or component unmounted');
+          console.log('⚠️ [QRScanner] QR reader element not found after waiting');
           return;
         }
+        
+        console.log('🎯 [QRScanner] DOM element found and stable:', qrReaderElement);
+        
+        // DOM 요소 내용을 완전히 비우기
+        qrReaderElement.innerHTML = '';
         
         console.log('🎥 [QRScanner] Creating Html5QrcodeScanner...');
         scanner = new Html5QrcodeScanner(
@@ -112,10 +125,10 @@ function QRScanner({ onScan, onClose }) {
 
         console.log('🚀 [QRScanner] Rendering scanner...');
         
-        // DOM 요소가 여전히 존재하는지 다시 확인
-        const qrReaderElementAfter = document.getElementById('qr-reader');
-        if (!qrReaderElementAfter || !isMounted) {
-          console.log('⚠️ [QRScanner] DOM element disappeared during initialization');
+        // 렌더링 전 최종 DOM 확인
+        const finalCheck = document.getElementById('qr-reader');
+        if (!finalCheck || !isMounted) {
+          console.log('⚠️ [QRScanner] DOM element disappeared before render');
           return;
         }
         
@@ -132,9 +145,9 @@ function QRScanner({ onScan, onClose }) {
             console.log('🔍 [QRScanner] Final DOM check:', finalElement);
             if (finalElement) {
               console.log('📊 [QRScanner] Element children:', finalElement.children.length);
-              console.log('📊 [QRScanner] Element innerHTML length:', finalElement.innerHTML.length);
+              console.log('📊 [QRScanner] Element has video element:', finalElement.querySelector('video') !== null);
             }
-          }, 100);
+          }, 200);
         }
         
       } catch (err) {
@@ -148,7 +161,7 @@ function QRScanner({ onScan, onClose }) {
     };
 
     // DOM이 완전히 렌더링된 후 초기화 (React Strict Mode 고려하여 지연 시간 증가)
-    const timer = setTimeout(initializeScanner, 500);
+    const timer = setTimeout(initializeScanner, 1000);
 
     return () => {
       isMounted = false;
@@ -156,11 +169,7 @@ function QRScanner({ onScan, onClose }) {
       
       if (scannerRef.current) {
         try {
-          // DOM 요소가 여전히 존재하는지 확인
-          const qrReaderElement = document.getElementById('qr-reader');
-          if (qrReaderElement && scannerRef.current._element && qrReaderElement.contains(scannerRef.current._element)) {
-            scannerRef.current.clear();
-          }
+          scannerRef.current.clear();
         } catch (err) {
           console.warn('Scanner cleanup error (ignored):', err);
         }
@@ -316,12 +325,16 @@ function QRScanner({ onScan, onClose }) {
                       position: 'relative',
                       width: '100%'
                     }}
-                    ref={(el) => {
-                      if (el) {
-                        console.log('🎯 [QRScanner] DOM element ref set:', el);
-                      }
-                    }}
                   >
+                    {/* React가 렌더링하는 내용을 완전히 제거하고 Html5QrcodeScanner가 직접 렌더링하도록 함 */}
+                    {!isScanning && cameraPermission === 'pending' && (
+                      <div className="text-center text-muted">
+                        <div className="spinner-border text-primary mb-2" role="status">
+                          <span className="visually-hidden">Loading...</span>
+                        </div>
+                        <div>카메라 권한을 요청하는 중...</div>
+                      </div>
+                    )}
                     {!isScanning && cameraPermission === 'granted' && (
                       <div className="text-center text-muted">
                         <div className="spinner-border text-primary mb-2" role="status">
@@ -330,10 +343,10 @@ function QRScanner({ onScan, onClose }) {
                         <div>카메라를 시작하는 중...</div>
                       </div>
                     )}
-                    {!isScanning && cameraPermission !== 'granted' && (
+                    {!isScanning && cameraPermission === 'denied' && (
                       <div className="text-center text-muted">
-                        <i className="bi bi-camera" style={{ fontSize: '3rem' }}></i>
-                        <div className="mt-2">카메라를 초기화하는 중...</div>
+                        <i className="bi bi-camera-off" style={{ fontSize: '3rem' }}></i>
+                        <div className="mt-2">카메라 권한이 거부되었습니다</div>
                       </div>
                     )}
                   </div>
