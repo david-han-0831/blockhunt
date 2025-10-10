@@ -9,6 +9,7 @@ import Challenges from './pages/Challenges';
 import Studio from './pages/Studio';
 import Profile from './pages/Profile';
 import Admin from './pages/Admin';
+import MigrateBlocks from './pages/MigrateBlocks';
 
 function AppRoutes() {
   const { currentUser } = useAuth();
@@ -43,6 +44,11 @@ function AppRoutes() {
       <Route path="/admin" element={
         <AdminProtectedRoute>
           <Admin />
+        </AdminProtectedRoute>
+      } />
+      <Route path="/migrate-blocks" element={
+        <AdminProtectedRoute>
+          <MigrateBlocks />
         </AdminProtectedRoute>
       } />
     </Routes>
