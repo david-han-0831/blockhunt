@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import AppBar from '../components/AppBar';
 import TabBar from '../components/TabBar';
+import { useAuth } from '../contexts/AuthContext';
+import { saveSubmission } from '../firebase/firestore';
 
 const LS_KEY = 'BlockHunt_workspace_v2';
 
@@ -113,6 +115,7 @@ const seedWorkspace = (workspace) => {
 };
 
 function Studio() {
+  const { currentUser } = useAuth();
   const blocklyAreaRef = useRef(null);
   const blocklyDivRef = useRef(null);
   const workspaceRef = useRef(null);
@@ -123,6 +126,7 @@ function Studio() {
   const [questionText, setQuestionText] = useState(
     'Write a program that reads an integer <em>n</em> and prints the sum of all integers from 1 to <em>n</em>. If <em>n</em> is negative, print <code>0</code>. For example, input <code>5</code> should output <code>15</code>. You may assume input is a single line with a valid integer.'
   );
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Initialize Blockly
   useEffect(() => {
@@ -296,12 +300,58 @@ function Studio() {
     URL.revokeObjectURL(url);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    if (!currentUser) {
+      showToast('로그인이 필요합니다.');
+      return;
+    }
+
+    if (!workspaceRef.current) {
+      showToast('워크스페이스가 초기화되지 않았습니다.');
+      return;
+    }
+
     const code = getPython();
-    const state = window.Blockly.serialization.workspaces.save(workspaceRef.current);
-    console.log('[Submit] code:', code);
-    console.log('[Submit] state:', state);
-    showToast('Submitted! (demo)');
+    if (!code || code.trim() === '') {
+      showToast('제출할 코드가 없습니다.');
+      return;
+    }
+
+    // localStorage에서 현재 문제 ID 가져오기
+    let questionId = 'default-question';
+    try {
+      const saved = localStorage.getItem('BlockHunt_current_question');
+      if (saved) {
+        const q = JSON.parse(saved);
+        questionId = q.id || 'default-question';
+      }
+    } catch (e) {
+      console.error('Failed to load question ID:', e);
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const state = window.Blockly.serialization.workspaces.save(workspaceRef.current);
+      
+      const result = await saveSubmission(currentUser.uid, questionId, {
+        code: code,
+        workspaceState: state
+      });
+
+      if (result.success) {
+        showToast('✅ 제출 완료!');
+        console.log('[Submit] Submission ID:', result.id);
+      } else {
+        showToast('❌ 제출 실패: ' + (result.error || '알 수 없는 오류'));
+        console.error('[Submit] Error:', result.error);
+      }
+    } catch (error) {
+      showToast('❌ 제출 중 오류 발생');
+      console.error('[Submit] Exception:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -315,8 +365,21 @@ function Studio() {
             <button className="btn btn-ghost" onClick={handleSave}>
               <i className="bi bi-save me-1"></i>Save
             </button>
-            <button className="btn btn-ghost" onClick={handleSubmit}>
-              <i className="bi bi-upload me-1"></i>Submit
+            <button 
+              className="btn btn-ghost" 
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                  Submitting...
+                </>
+              ) : (
+                <>
+                  <i className="bi bi-upload me-1"></i>Submit
+                </>
+              )}
             </button>
             <button className="btn btn-ghost" onClick={handleDownload}>
               <i className="bi bi-download me-1"></i>Download .py

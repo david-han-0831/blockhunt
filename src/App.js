@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import AdminProtectedRoute from './components/AdminProtectedRoute';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Challenges from './pages/Challenges';
@@ -40,9 +41,9 @@ function AppRoutes() {
         </ProtectedRoute>
       } />
       <Route path="/admin" element={
-        <ProtectedRoute>
+        <AdminProtectedRoute>
           <Admin />
-        </ProtectedRoute>
+        </AdminProtectedRoute>
       } />
     </Routes>
   );
