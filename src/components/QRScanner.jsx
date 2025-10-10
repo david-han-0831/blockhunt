@@ -48,21 +48,27 @@ function QRScanner({ onScan, onClose }) {
     
     const initializeScanner = async () => {
       try {
-        console.log('🔍 Initializing QR scanner...');
+        console.log('🔍 [QRScanner] Initializing QR scanner...');
         
         // 카메라 권한 먼저 요청
         const hasPermission = await requestCameraPermission();
+        console.log('📸 [QRScanner] Permission result:', hasPermission);
+        
         if (!hasPermission || !isMounted) {
+          console.log('⚠️ [QRScanner] No permission or unmounted');
           return;
         }
         
         // DOM 요소가 존재하는지 확인
         const qrReaderElement = document.getElementById('qr-reader');
+        console.log('🔍 [QRScanner] QR reader element:', qrReaderElement);
+        
         if (!qrReaderElement || !isMounted) {
-          console.log('QR reader element not found or component unmounted');
+          console.log('⚠️ [QRScanner] QR reader element not found or component unmounted');
           return;
         }
         
+        console.log('🎥 [QRScanner] Creating Html5QrcodeScanner...');
         scanner = new Html5QrcodeScanner(
           'qr-reader',
           { 
@@ -85,14 +91,14 @@ function QRScanner({ onScan, onClose }) {
         );
 
         const onScanSuccess = (decodedText, decodedResult) => {
-          console.log('🔍 QR Code scanned:', decodedText);
+          console.log('✅ [QRScanner] QR Code scanned:', decodedText);
           if (isMounted) {
             setIsScanning(false);
             if (scanner) {
               try {
                 scanner.clear();
               } catch (err) {
-                console.warn('Scanner clear error:', err);
+                console.warn('⚠️ [QRScanner] Scanner clear error:', err);
               }
             }
             onScan(decodedText);
@@ -104,18 +110,20 @@ function QRScanner({ onScan, onClose }) {
           // console.warn('QR scan error:', error);
         };
 
+        console.log('🚀 [QRScanner] Rendering scanner...');
         await scanner.render(onScanSuccess, onScanFailure);
         
         if (isMounted) {
           setIsScanning(true);
           scannerRef.current = scanner;
-          console.log('✅ QR scanner initialized successfully');
+          console.log('✅ [QRScanner] Scanner initialized successfully, isScanning=true');
         }
         
       } catch (err) {
-        console.error('❌ Failed to initialize QR scanner:', err);
+        console.error('❌ [QRScanner] Failed to initialize scanner:', err);
+        console.error('❌ [QRScanner] Error details:', err.message, err.stack);
         if (isMounted) {
-          setError(`QR 스캐너를 초기화할 수 없습니다. 카메라 권한을 확인해주세요.`);
+          setError(`QR 스캐너를 초기화할 수 없습니다: ${err.message}`);
           setCameraPermission('denied');
         }
       }
@@ -185,7 +193,7 @@ function QRScanner({ onScan, onClose }) {
                 </div>
               )}
 
-              {/* 카메라 권한 상태 표시 */}
+              {/* 카메라 권한 및 초기화 상태 표시 */}
               {cameraPermission === 'pending' && !error && (
                 <div className="alert alert-info mb-3">
                   <div className="d-flex align-items-center">
@@ -197,6 +205,17 @@ function QRScanner({ onScan, onClose }) {
                   <small className="d-block mt-2">
                     브라우저에서 카메라 권한 요청 알림이 표시되면 "허용"을 눌러주세요.
                   </small>
+                </div>
+              )}
+              
+              {cameraPermission === 'granted' && !isScanning && !error && !showManualInput && (
+                <div className="alert alert-info mb-3">
+                  <div className="d-flex align-items-center">
+                    <div className="spinner-border spinner-border-sm me-2" role="status">
+                      <span className="visually-hidden">Loading...</span>
+                    </div>
+                    <div>카메라를 시작하는 중...</div>
+                  </div>
                 </div>
               )}
 
