@@ -3,8 +3,7 @@ import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import AppBar from '../components/AppBar';
 import TabBar from '../components/TabBar';
-import QRTestModal from '../components/QRTestModal';
-import QRResultModal from '../components/QRResultModal';
+import QRScanner from '../components/QRScanner';
 import { useAuth } from '../contexts/AuthContext';
 import { getUserProfile, processQRScan, getBlocks, removeCollectedBlock } from '../firebase/firestore';
 import useToast from '../hooks/useToast';
@@ -28,8 +27,6 @@ function Profile() {
   const [showScanner, setShowScanner] = useState(false);
   const [blocks, setBlocks] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [showResultModal, setShowResultModal] = useState(false);
-  const [scanResult, setScanResult] = useState(null);
   
   const { currentUser } = useAuth();
   const { success, error } = useToast();
@@ -132,83 +129,41 @@ function Profile() {
   const handleQRScan = async (qrData) => {
     if (!currentUser) {
       error('로그인이 필요합니다.');
+      setShowScanner(false);
       return;
     }
 
     setLoading(true);
     try {
       console.log('🔍 Processing QR scan:', qrData);
-      console.log('👤 Current user:', currentUser.uid);
-      console.log('📦 Current collected blocks:', Array.from(collected));
-      
       const result = await processQRScan(currentUser.uid, qrData);
       console.log('✅ QR scan result:', result);
       
       if (result.success) {
         if (result.alreadyCollected) {
-          // 이미 보유한 블록인 경우
-          const blockNames = result.blocksObtained.map(blockId => {
-            const block = blocks.find(b => b.id === blockId);
-            return block ? block.name : blockId;
-          }).join(', ');
-          
-          // 스캐너 모달 닫기
-          setShowScanner(false);
-          
-          setScanResult({
-            success: true,
-            alreadyCollected: true,
-            blocksObtained: result.blocksObtained,
-            blockNames: blockNames
-          });
-          setShowResultModal(true);
+          success('이미 보유하고 있는 블록입니다! 🎯');
         } else {
-          // 새로운 블록을 획득한 경우
-          const blockNames = result.blocksObtained.map(blockId => {
+          // 새로운 블록 획득
+          const blockNames = result.blocksObtained?.map(blockId => {
             const block = blocks.find(b => b.id === blockId);
             return block ? block.name : blockId;
-          }).join(', ');
+          }).join(', ') || '';
           
-          console.log('🎉 New blocks obtained:', result.blocksObtained);
-          console.log('📝 Block names:', blockNames);
+          success(`새로운 블록을 획득했습니다! 🎉\n${blockNames}\n총 ${result.totalBlocks}개의 블록 보유`);
           
-          // 즉시 로컬 상태 업데이트 (빠른 UI 반응)
+          // 로컬 상태 업데이트
           setCollected(prev => {
             const newCollected = new Set(prev);
-            result.blocksObtained.forEach(blockId => newCollected.add(blockId));
-            console.log('🔄 Updated collected blocks:', Array.from(newCollected));
+            result.blocksObtained?.forEach(blockId => newCollected.add(blockId));
             return newCollected;
           });
           
           // Firebase에서 최신 데이터 다시 로드
-          console.log('🔄 Reloading user data from Firebase...');
           await loadUserData();
-          console.log('✅ User data reloaded');
-          
-          // 스캐너 모달 닫기
-          setShowScanner(false);
-          
-          // 성공 모달 표시
-          setScanResult({
-            success: true,
-            alreadyCollected: false,
-            blocksObtained: result.blocksObtained,
-            blockNames: blockNames
-          });
-          setShowResultModal(true);
         }
-      } else {
-        console.error('❌ QR scan failed:', result.error);
-        
-        // 스캐너 모달 닫기
         setShowScanner(false);
-        
-        // 실패 모달 표시
-        setScanResult({
-          success: false,
-          error: result.error
-        });
-        setShowResultModal(true);
+      } else {
+        error('QR 코드 처리 실패: ' + result.error);
       }
     } catch (err) {
       console.error('QR scan error:', err);
@@ -477,23 +432,13 @@ function Profile() {
       {/* 디버깅: Admin 버튼 표시 상태 */}
       {console.log('🔍 Admin button render check:', { isAdmin, shouldShow: isAdmin })}
 
-      {/* QR 테스트 모달 */}
-      <QRTestModal 
-        isOpen={showScanner}
-        onClose={() => {
-          setShowScanner(false);
-          // 스캐너가 닫힐 때 결과 모달도 닫기
-          setShowResultModal(false);
-        }}
-        onScan={handleQRScan}
-      />
-
-      {/* QR 스캔 결과 모달 */}
-      <QRResultModal 
-        isOpen={showResultModal}
-        result={scanResult}
-        onClose={() => setShowResultModal(false)}
-      />
+      {/* QR 스캐너 모달 */}
+      {showScanner && (
+        <QRScanner
+          onScan={handleQRScan}
+          onClose={() => setShowScanner(false)}
+        />
+      )}
 
       <TabBar />
     </>

@@ -16,14 +16,45 @@ function QRScanner({ onScan, onClose }) {
   const [error, setError] = useState(null);
   const [showManualInput, setShowManualInput] = useState(false);
   const [manualQRData, setManualQRData] = useState('');
+  const [cameraPermission, setCameraPermission] = useState('pending'); // 'pending', 'granted', 'denied'
 
   useEffect(() => {
     let scanner = null;
     let isMounted = true;
     
+    const requestCameraPermission = async () => {
+      try {
+        console.log('📸 Requesting camera permission...');
+        
+        // 명시적으로 카메라 권한 요청
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { facingMode: 'environment' } // 후면 카메라 우선
+        });
+        
+        console.log('✅ Camera permission granted');
+        setCameraPermission('granted');
+        
+        // 권한 획득 후 스트림 즉시 중지 (스캐너가 다시 시작할 것)
+        stream.getTracks().forEach(track => track.stop());
+        
+        return true;
+      } catch (err) {
+        console.error('❌ Camera permission denied:', err);
+        setCameraPermission('denied');
+        setError(`카메라 권한이 필요합니다. 브라우저 설정에서 카메라 권한을 허용해주세요.`);
+        return false;
+      }
+    };
+    
     const initializeScanner = async () => {
       try {
         console.log('🔍 Initializing QR scanner...');
+        
+        // 카메라 권한 먼저 요청
+        const hasPermission = await requestCameraPermission();
+        if (!hasPermission || !isMounted) {
+          return;
+        }
         
         // DOM 요소가 존재하는지 확인
         const qrReaderElement = document.getElementById('qr-reader');
@@ -42,7 +73,13 @@ function QRScanner({ onScan, onClose }) {
             showZoomSliderIfSupported: true,
             defaultZoomValueIfSupported: 2,
             useBarCodeDetectorIfSupported: true,
-            rememberLastUsedCamera: true
+            rememberLastUsedCamera: true,
+            // 모바일 최적화
+            videoConstraints: {
+              facingMode: 'environment', // 후면 카메라
+              width: { ideal: 1280 },
+              height: { ideal: 720 }
+            }
           },
           false // verbose
         );
@@ -78,7 +115,8 @@ function QRScanner({ onScan, onClose }) {
       } catch (err) {
         console.error('❌ Failed to initialize QR scanner:', err);
         if (isMounted) {
-          setError(`QR 스캐너를 초기화할 수 없습니다: ${err.message}`);
+          setError(`QR 스캐너를 초기화할 수 없습니다. 카메라 권한을 확인해주세요.`);
+          setCameraPermission('denied');
         }
       }
     };
@@ -94,7 +132,7 @@ function QRScanner({ onScan, onClose }) {
         try {
           // DOM 요소가 여전히 존재하는지 확인
           const qrReaderElement = document.getElementById('qr-reader');
-          if (qrReaderElement && qrReaderElement.contains(scannerRef.current._element)) {
+          if (qrReaderElement && scannerRef.current._element && qrReaderElement.contains(scannerRef.current._element)) {
             scannerRef.current.clear();
           }
         } catch (err) {
@@ -139,10 +177,55 @@ function QRScanner({ onScan, onClose }) {
               ></button>
             </div>
             <div className="modal-body">
-              {error ? (
-                <div className="alert alert-danger">
+              {/* HTTPS 경고 */}
+              {window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && (
+                <div className="alert alert-warning mb-3">
                   <i className="bi bi-exclamation-triangle me-2"></i>
-                  {error}
+                  <strong>주의:</strong> 카메라는 HTTPS 연결에서만 작동합니다.
+                </div>
+              )}
+
+              {/* 카메라 권한 상태 표시 */}
+              {cameraPermission === 'pending' && !error && (
+                <div className="alert alert-info mb-3">
+                  <div className="d-flex align-items-center">
+                    <div className="spinner-border spinner-border-sm me-2" role="status">
+                      <span className="visually-hidden">Loading...</span>
+                    </div>
+                    <div>카메라 권한을 요청하는 중...</div>
+                  </div>
+                  <small className="d-block mt-2">
+                    브라우저에서 카메라 권한 요청 알림이 표시되면 "허용"을 눌러주세요.
+                  </small>
+                </div>
+              )}
+
+              {error ? (
+                <div>
+                  <div className="alert alert-danger">
+                    <i className="bi bi-exclamation-triangle me-2"></i>
+                    {error}
+                  </div>
+                  {cameraPermission === 'denied' && (
+                    <div className="alert alert-info">
+                      <strong>카메라 권한 허용 방법:</strong>
+                      <ol className="mb-0 mt-2 small">
+                        <li>브라우저 주소창 왼쪽의 자물쇠 아이콘 클릭</li>
+                        <li>"카메라" 또는 "권한" 메뉴 선택</li>
+                        <li>카메라 권한을 "허용"으로 변경</li>
+                        <li>페이지 새로고침 후 다시 시도</li>
+                      </ol>
+                    </div>
+                  )}
+                  <div className="text-center mt-3">
+                    <button 
+                      className="btn btn-outline-primary"
+                      onClick={() => setShowManualInput(true)}
+                    >
+                      <i className="bi bi-keyboard me-1"></i>
+                      QR 데이터 직접 입력 (테스트용)
+                    </button>
+                  </div>
                 </div>
               ) : showManualInput ? (
                 <div>
