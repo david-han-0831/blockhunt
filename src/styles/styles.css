@@ -89,6 +89,14 @@ a{color:var(--brand)}a:hover{color:#c40e38}
   font-weight: 800;
   font-size: 1rem;                          /* label size */
   line-height: 1;
+
+  /* 클릭 가능성 확보 */
+  cursor: pointer;
+  pointer-events: auto;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
 }
 .fab i{
   font-size: 1.25rem;                       /* icon size */
@@ -103,12 +111,19 @@ a{color:var(--brand)}a:hover{color:#c40e38}
     0 12px 28px rgba(225, 17, 72, .28),
     0 2px 6px rgba(0,0,0,.08);
 }
-.fab:hover{ transform: translateY(-1px); box-shadow:
+.fab:hover:not(:disabled){ transform: translateY(-1px); box-shadow:
   0 16px 36px rgba(225, 17, 72, .32),
   0 4px 10px rgba(0,0,0,.10);
 }
-.fab:active{ transform: translateY(0); filter: brightness(.96); }
+.fab:active:not(:disabled){ transform: translateY(0); filter: brightness(.96); }
 .fab:focus-visible{ outline: 3px solid #fda4af; outline-offset: 3px; }
+
+/* Disabled 상태 스타일 */
+.fab:disabled{
+  cursor: not-allowed;
+  pointer-events: none;
+  opacity: 0.6;
+}
 
 /* subtle pulse on mount (reduced motion safe) */
 @media (prefers-reduced-motion: no-preference){
@@ -172,7 +187,7 @@ a{color:var(--brand)}a:hover{color:#c40e38}
 .block-card{border:1px solid #eef2f7;border-radius:14px;padding:.9rem;display:flex;align-items:center;justify-content:space-between;gap:.75rem;background:#fff}
 .block-card .name{font-weight:800}
 .block-card .cat-badge{font-size:.75rem;padding:.15rem .5rem;border-radius:999px;border:1px solid #e5e7eb;background:#f8fafc}
-.block-card.collected{outline:2px dashed #fde68a;background:linear-gradient(90deg,rgba(253,230,138,.25),transparent 50%)}
+.block-card.collected{outline:2px solid #22c55e;background:linear-gradient(90deg,rgba(34,197,94,.1),transparent 50%)}
 .block-card.cat-logic{border-left:6px solid var(--logic);background:linear-gradient(90deg,var(--logic-bg),transparent 55%)}
 .block-card.cat-loops{border-left:6px solid var(--loops);background:linear-gradient(90deg,var(--loops-bg),transparent 55%)}
 .block-card.cat-math{border-left:6px solid var(--math);background:linear-gradient(90deg,var(--math-bg),transparent 55%)}
@@ -180,6 +195,54 @@ a{color:var(--brand)}a:hover{color:#c40e38}
 .block-card.cat-lists{border-left:6px solid var(--lists);background:linear-gradient(90deg,var(--lists-bg),transparent 55%)}
 .block-card.cat-vars{border-left:6px solid var(--vars);background:linear-gradient(90deg,var(--vars-bg),transparent 55%)}
 .block-card.cat-func{border-left:6px solid var(--func);background:linear-gradient(90deg,var(--func-bg),transparent 55%)}
+
+/* Block icon with collected indicator */
+.block-icon-container{
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+}
+
+.block-icon-container i{
+  font-size: 1.2rem;
+  color: #64748b;
+}
+
+.collected-indicator{
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 18px;
+  height: 18px;
+  background: #22c55e;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,.1);
+}
+
+.collected-indicator i{
+  font-size: 0.7rem;
+  color: #fff;
+}
+
+/* Collected block styling */
+.block-card.collected .block-icon-container{
+  background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+  border-color: #22c55e;
+}
+
+.block-card.collected .block-icon-container i{
+  color: #16a34a;
+}
 .progress{height:10px;background:#f1f5f9}
 .progress-bar{background:var(--brand)}
 .badge-easy{background:var(--easy-bg);color:var(--easy)}
@@ -215,6 +278,112 @@ main{padding-bottom:calc(var(--tabbar-h) + 32px)}
 .code-box.tall{min-height:220px;max-height:60svh;overflow:auto;border:1px solid #0b1020}
 .modal.tall .modal-dialog{max-width:min(1080px,96vw);height:min(92svh,100svh);margin:.75rem auto}
 .modal.tall .modal-content{height:100%}.modal.tall .modal-body{overflow:auto}
+
+/* Modal fixes - 완전 불투명 강제 적용 */
+.modal-backdrop {
+  background-color: rgba(0, 0, 0, 0.7) !important;
+  opacity: 1 !important;
+  backdrop-filter: none !important;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  z-index: 1050 !important;
+}
+
+.modal {
+  background-color: transparent !important;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  z-index: 1055 !important;
+}
+
+.modal.show {
+  display: block !important;
+  background-color: transparent !important;
+}
+
+.modal-dialog {
+  background-color: transparent !important;
+  position: relative !important;
+  width: auto !important;
+  margin: 1.75rem auto !important;
+  max-width: 500px !important;
+}
+
+.modal-content {
+  background-color: #ffffff !important;
+  background: #ffffff !important;
+  border: 3px solid #e5e7eb !important;
+  border-radius: 16px !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important;
+  opacity: 1 !important;
+  position: relative !important;
+  z-index: 1055 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  pointer-events: auto !important;
+}
+
+.modal-header {
+  background-color: #ffffff !important;
+  background: #ffffff !important;
+  border-bottom: 2px solid #e5e7eb !important;
+  border-radius: 16px 16px 0 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 1rem !important;
+}
+
+.modal-body {
+  background-color: #ffffff !important;
+  background: #ffffff !important;
+  position: relative !important;
+  flex: 1 1 auto !important;
+  padding: 1rem !important;
+}
+
+.modal-footer {
+  background-color: #ffffff !important;
+  background: #ffffff !important;
+  border-top: 2px solid #e5e7eb !important;
+  border-radius: 0 0 16px 16px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  padding: 1rem !important;
+}
+
+/* 모든 텍스트와 요소 강제 불투명 */
+.modal-content *,
+.modal-header *,
+.modal-body *,
+.modal-footer * {
+  opacity: 1 !important;
+}
+
+/* 특정 요소들에 대한 강제 스타일 */
+.modal-title {
+  color: #1f2937 !important;
+  opacity: 1 !important;
+}
+
+.modal-body p,
+.modal-body h6,
+.modal-body div {
+  color: inherit !important;
+  opacity: 1 !important;
+}
+
+.btn-close {
+  opacity: 1 !important;
+}
 
 /* Auth forms */
 .form-control{border-radius:12px}

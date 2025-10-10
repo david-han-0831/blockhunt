@@ -3,8 +3,11 @@ import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import AppBar from '../components/AppBar';
 import TabBar from '../components/TabBar';
-import { getQuestions } from '../firebase/firestore';
+import QRScanner from '../components/QRScanner';
+import { getQuestions, processQRScan } from '../firebase/firestore';
+import { useAuth } from '../contexts/AuthContext';
 import useToast from '../hooks/useToast';
+import useAdminAuth from '../hooks/useAdminAuth';
 
 const QUESTIONS = [
   {
@@ -58,7 +61,11 @@ function Challenges() {
   const [diffFilter, setDiffFilter] = useState('all');
   const [tagFilter, setTagFilter] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const { error } = useToast();
+  const [showQRScanner, setShowQRScanner] = useState(false);
+  const [scanLoading, setScanLoading] = useState(false);
+  const { currentUser } = useAuth();
+  const { error, success } = useToast();
+  const { isAdmin } = useAdminAuth();
 
   // Firebase에서 문제 목록 불러오기
   useEffect(() => {
@@ -107,6 +114,37 @@ function Challenges() {
 
   const handleTagClick = (tag) => {
     setTagFilter(tagFilter === tag ? null : tag);
+  };
+
+  // QR 스캔 처리
+  const handleQRScan = async (qrData) => {
+    if (!currentUser) {
+      error('로그인이 필요합니다.');
+      setShowQRScanner(false);
+      return;
+    }
+
+    setScanLoading(true);
+    try {
+      console.log('QR 스캔 데이터:', qrData);
+      const result = await processQRScan(currentUser.uid, qrData);
+      
+      if (result.success) {
+        if (result.alreadyCollected) {
+          success('이미 보유하고 있는 블록입니다! 🎯');
+        } else {
+          success(`새로운 블록을 획득했습니다! 🎉\n총 ${result.totalBlocks}개의 블록 보유`);
+        }
+        setShowQRScanner(false);
+      } else {
+        error('QR 코드 처리 실패: ' + result.error);
+      }
+    } catch (err) {
+      console.error('QR 스캔 오류:', err);
+      error('QR 코드 처리 중 오류가 발생했습니다.');
+    } finally {
+      setScanLoading(false);
+    }
   };
 
   const filteredQuestions = questions.filter(q => 
@@ -246,16 +284,31 @@ function Challenges() {
         <div className="mt-4 small muted">Tip:</div>
       </main>
 
-      <button className="fab d-inline-flex align-items-center">
+      <button 
+        className="fab d-inline-flex align-items-center"
+        onClick={() => setShowQRScanner(true)}
+        disabled={scanLoading || !currentUser}
+      >
         <i className="bi bi-qr-code-scan"></i> <span className="fab-label">Scan</span>
       </button>
 
-      <Link to="/admin">
-        <button className="fab fab--secondary fab-admin fab--sm" aria-label="Open Admin">
-          <i className="bi bi-shield-lock"></i>
-          <span className="fab-label">Admin</span>
-        </button>
-      </Link>
+      {/* Admin FAB 버튼 - 관리자만 표시 */}
+      {isAdmin && (
+        <Link to="/admin">
+          <button className="fab fab--secondary fab-admin fab--sm" aria-label="Open Admin">
+            <i className="bi bi-shield-lock"></i>
+            <span className="fab-label">Admin</span>
+          </button>
+        </Link>
+      )}
+
+      {/* QR 스캐너 모달 */}
+      {showQRScanner && (
+        <QRScanner
+          onScan={handleQRScan}
+          onClose={() => setShowQRScanner(false)}
+        />
+      )}
 
       <TabBar />
     </>

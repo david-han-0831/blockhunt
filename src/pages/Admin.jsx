@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import AppBar from '../components/AppBar';
 import TabBar from '../components/TabBar';
+import QRViewModal from '../components/QRViewModal';
 import { useAuth } from '../contexts/AuthContext';
 import { 
   getQuestions, 
@@ -10,8 +11,15 @@ import {
   updateQuestion, 
   deleteQuestion,
   getAllSubmissions,
-  getUserProfile 
+  getUserProfile,
+  getBlocks,
+  updateBlockSettings,
+  getQRCodes,
+  createQRCode,
+  updateQRCode,
+  deleteQRCode
 } from '../firebase/firestore';
+import { migrateBlocksToFirestore, migrateBlocksToFirestoreWithProgress, verifyBlocksInFirestore } from '../utils/migrateBlocks';
 import useToast from '../hooks/useToast';
 
 function Admin() {
@@ -24,6 +32,31 @@ function Admin() {
   const [filterStatus, setFilterStatus] = useState('');
   const [filterQuestion, setFilterQuestion] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // Blocks & QR 관련 상태
+  const [blocks, setBlocks] = useState([]);
+  const [blocksLoading, setBlocksLoading] = useState(false);
+  const [qrCodes, setQrCodes] = useState([]);
+  const [qrCodesLoading, setQrCodesLoading] = useState(false);
+  const [showQRForm, setShowQRForm] = useState(false);
+  const [selectedBlock, setSelectedBlock] = useState('');
+  const [qrFormData, setQrFormData] = useState({
+    name: '',
+    block: '',
+    isActive: true,
+    startDate: '',
+    endDate: ''
+  });
+  
+  // 마이그레이션 관련 상태
+  const [migrationStatus, setMigrationStatus] = useState('idle'); // 'idle', 'migrating', 'completed', 'error'
+  const [migrationProgress, setMigrationProgress] = useState(0);
+  const [migrationResult, setMigrationResult] = useState(null);
+  
+  // QR 코드 뷰 모달 상태
+  const [showQRViewModal, setShowQRViewModal] = useState(false);
+  const [selectedQRCode, setSelectedQRCode] = useState(null);
+  
   const { currentUser } = useAuth();
   const { success, error } = useToast();
 
@@ -32,6 +65,14 @@ function Admin() {
     loadQuestions();
     loadSubmissions();
   }, []);
+
+  // Blocks & QR 데이터 로딩
+  useEffect(() => {
+    if (activeTab === 'blocks') {
+      loadBlocks();
+      loadQRCodes();
+    }
+  }, [activeTab]);
 
   const loadQuestions = async () => {
     setLoading(true);
@@ -210,6 +251,253 @@ function Admin() {
     });
   };
 
+  // ==================== 블록 관리 함수들 ====================
+
+  // 블록 목록 불러오기
+  const loadBlocks = async () => {
+    setBlocksLoading(true);
+    try {
+      console.log('🔍 Loading blocks from Firestore...');
+      const result = await getBlocks();
+      console.log('📦 Blocks result:', result);
+      
+      if (result.success) {
+        setBlocks(result.data);
+        console.log(`✅ Loaded ${result.data.length} blocks`);
+      } else {
+        console.error('❌ Failed to load blocks:', result.error);
+        error('블록 목록을 불러오는데 실패했습니다: ' + result.error);
+      }
+    } catch (err) {
+      console.error('❌ Error loading blocks:', err);
+      error('블록 목록을 불러오는데 실패했습니다.');
+    } finally {
+      setBlocksLoading(false);
+    }
+  };
+
+  // 블록 설정 업데이트
+  const handleBlockToggle = async (blockId, isDefaultBlock) => {
+    try {
+      const result = await updateBlockSettings(blockId, { isDefaultBlock });
+      if (result.success) {
+        // 로컬 상태 업데이트
+        setBlocks(prev => prev.map(block => 
+          block.id === blockId ? { ...block, isDefaultBlock } : block
+        ));
+        success(`블록 설정이 업데이트되었습니다.`);
+      } else {
+        error('블록 설정 업데이트에 실패했습니다: ' + result.error);
+      }
+    } catch (err) {
+      error('블록 설정 업데이트에 실패했습니다.');
+    }
+  };
+
+  // 블록 마이그레이션
+  const handleMigrateBlocks = async () => {
+    if (!window.confirm('Firebase에 블록 데이터를 마이그레이션하시겠습니까? 기존 데이터가 덮어써질 수 있습니다.')) {
+      return;
+    }
+
+    setMigrationStatus('migrating');
+    setMigrationProgress(0);
+    setMigrationResult(null);
+    
+    try {
+      console.log('🚀 Starting block migration...');
+      
+      // 마이그레이션 함수를 수정하여 진행 상황 콜백 지원
+      const result = await migrateBlocksToFirestoreWithProgress((progress) => {
+        setMigrationProgress(progress);
+      });
+      
+      setMigrationResult(result);
+      
+      if (result.success) {
+        setMigrationStatus('completed');
+        success(`블록 마이그레이션이 완료되었습니다! (성공: ${result.successCount}, 실패: ${result.errorCount})`);
+        await loadBlocks(); // 블록 목록 새로고침
+      } else {
+        setMigrationStatus('error');
+        error('블록 마이그레이션에 실패했습니다.');
+      }
+    } catch (err) {
+      console.error('Migration error:', err);
+      setMigrationStatus('error');
+      setMigrationResult({ success: false, error: err.message });
+      error('블록 마이그레이션 중 오류가 발생했습니다.');
+    }
+  };
+
+  // 블록 검증
+  const handleVerifyBlocks = async () => {
+    setLoading(true);
+    try {
+      const result = await verifyBlocksInFirestore();
+      if (result.success) {
+        console.log('✅ Block verification completed. Check console for details.');
+        success('블록 검증이 완료되었습니다. 콘솔을 확인하세요.');
+      } else {
+        error('블록 검증에 실패했습니다: ' + result.error);
+      }
+    } catch (err) {
+      error('블록 검증 중 오류가 발생했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ==================== QR 코드 관리 함수들 ====================
+
+  // QR 코드 목록 불러오기
+  const loadQRCodes = async () => {
+    setQrCodesLoading(true);
+    try {
+      const result = await getQRCodes();
+      if (result.success) {
+        setQrCodes(result.data);
+      } else {
+        error('QR 코드 목록을 불러오는데 실패했습니다: ' + result.error);
+      }
+    } catch (err) {
+      error('QR 코드 목록을 불러오는데 실패했습니다.');
+    } finally {
+      setQrCodesLoading(false);
+    }
+  };
+
+  // QR 코드 생성
+  const handleCreateQR = async (e) => {
+    e.preventDefault();
+    
+    if (!qrFormData.block) {
+      error('블록을 선택해주세요.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const result = await createQRCode({
+        ...qrFormData,
+        createdBy: currentUser.uid
+      });
+      
+      if (result.success) {
+        success('QR 코드가 성공적으로 생성되었습니다!');
+        setShowQRForm(false);
+        setQrFormData({
+          name: '',
+          block: '',
+          isActive: true,
+          startDate: '',
+          endDate: ''
+        });
+        setSelectedBlock('');
+        await loadQRCodes();
+        
+        // 생성된 QR 코드를 자동으로 표시
+        if (result.data) {
+          setTimeout(() => {
+            handleViewQR(result.data);
+          }, 500);
+        }
+      } else {
+        error('QR 코드 생성에 실패했습니다: ' + result.error);
+      }
+    } catch (err) {
+      error('QR 코드 생성에 실패했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // QR 코드 활성화/비활성화
+  const handleQRToggle = async (qrCodeId, isActive) => {
+    try {
+      const result = await updateQRCode(qrCodeId, { isActive });
+      if (result.success) {
+        setQrCodes(prev => prev.map(qr => 
+          qr.id === qrCodeId ? { ...qr, isActive } : qr
+        ));
+        success(`QR 코드가 ${isActive ? '활성화' : '비활성화'}되었습니다.`);
+      } else {
+        error('QR 코드 상태 변경에 실패했습니다: ' + result.error);
+      }
+    } catch (err) {
+      error('QR 코드 상태 변경에 실패했습니다.');
+    }
+  };
+
+  // QR 코드 삭제
+  const handleDeleteQR = async (qrCodeId) => {
+    if (!window.confirm('정말로 이 QR 코드를 삭제하시겠습니까?')) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const result = await deleteQRCode(qrCodeId);
+      if (result.success) {
+        success('QR 코드가 삭제되었습니다.');
+        await loadQRCodes();
+      } else {
+        error('QR 코드 삭제에 실패했습니다: ' + result.error);
+      }
+    } catch (err) {
+      error('QR 코드 삭제에 실패했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 블록 선택 변경
+  const handleBlockSelect = (blockId) => {
+    setSelectedBlock(blockId);
+    setQrFormData(prev => ({
+      ...prev,
+      block: blockId
+    }));
+  };
+
+  // QR 코드 보기
+  const handleViewQR = (qrCode) => {
+    setSelectedQRCode(qrCode);
+    setShowQRViewModal(true);
+  };
+
+  // QR 모달 닫기
+  const handleCloseQRModal = () => {
+    setShowQRViewModal(false);
+    setSelectedQRCode(null);
+  };
+
+  // 카테고리별 블록 그룹화
+  const groupBlocksByCategory = (blocks) => {
+    const grouped = {};
+    blocks.forEach(block => {
+      if (!grouped[block.category]) {
+        grouped[block.category] = [];
+      }
+      grouped[block.category].push(block);
+    });
+    return grouped;
+  };
+
+  // 카테고리 아이콘
+  const getCategoryIcon = (category) => {
+    const icons = {
+      'Logic': 'bi-braces',
+      'Loops': 'bi-arrow-repeat',
+      'Math': 'bi-123',
+      'Text': 'bi-chat-dots',
+      'Lists': 'bi-list-ul',
+      'Variables': 'bi-box',
+      'Functions': 'bi-gear'
+    };
+    return icons[category] || 'bi-puzzle';
+  };
+
   return (
     <>
       <Navbar />
@@ -238,6 +526,14 @@ function Admin() {
               onClick={() => setActiveTab('questions')}
             >
               <i className="bi bi-journal-text me-1"></i> Questions
+            </button>
+          </li>
+          <li className="nav-item" role="presentation">
+            <button 
+              className={`nav-link ${activeTab === 'blocks' ? 'active' : ''}`}
+              onClick={() => setActiveTab('blocks')}
+            >
+              <i className="bi bi-boxes me-1"></i> Blocks & QR
             </button>
           </li>
         </ul>
@@ -553,10 +849,400 @@ function Admin() {
               </div>
             </div>
           )}
+
+          {activeTab === 'blocks' && (
+            <div className="tab-pane fade show active">
+              <div className="row g-3">
+                {/* 좌측: 블록 관리 */}
+                <div className="col-lg-6">
+                  <div className="panel p-3">
+                    <div className="d-flex align-items-center justify-content-between mb-3">
+                      <h6 className="mb-0">
+                        <i className="bi bi-puzzle me-2"></i>
+                        Block Management
+                      </h6>
+                      <div className="d-flex align-items-center gap-2">
+                        <div className="small text-muted">
+                          {blocksLoading ? (
+                            <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                          ) : (
+                            `${blocks.length} blocks`
+                          )}
+                        </div>
+                        <button 
+                          className="btn btn-sm btn-outline-primary"
+                          onClick={handleMigrateBlocks}
+                          disabled={migrationStatus === 'migrating' || loading}
+                          title="Firebase에 블록 데이터 마이그레이션"
+                        >
+                          {migrationStatus === 'migrating' ? (
+                            <>
+                              <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                              Migrating...
+                            </>
+                          ) : (
+                            <>
+                              <i className="bi bi-download me-1"></i>
+                              Migrate
+                            </>
+                          )}
+                        </button>
+                        <button 
+                          className="btn btn-sm btn-outline-secondary"
+                          onClick={handleVerifyBlocks}
+                          disabled={migrationStatus === 'migrating' || loading}
+                          title="Firebase 블록 데이터 검증"
+                        >
+                          <i className="bi bi-check-circle me-1"></i>
+                          Verify
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* 마이그레이션 상태 표시 */}
+                    {migrationStatus !== 'idle' && (
+                      <div className="border rounded p-3 mb-3 bg-light">
+                        {migrationStatus === 'migrating' && (
+                          <div>
+                            <div className="d-flex align-items-center justify-content-between mb-2">
+                              <h6 className="mb-0 small">
+                                <i className="bi bi-arrow-clockwise me-1"></i>
+                                블록 마이그레이션 진행 중...
+                              </h6>
+                              <span className="small text-muted">{migrationProgress}%</span>
+                            </div>
+                            <div className="progress">
+                              <div 
+                                className="progress-bar progress-bar-striped progress-bar-animated" 
+                                style={{ width: `${migrationProgress}%` }}
+                              ></div>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {migrationStatus === 'completed' && migrationResult && (
+                          <div>
+                            <h6 className="mb-2 small text-success">
+                              <i className="bi bi-check-circle me-1"></i>
+                              마이그레이션 완료!
+                            </h6>
+                            <div className="small text-muted">
+                              성공: {migrationResult.successCount}개 | 
+                              실패: {migrationResult.errorCount}개
+                            </div>
+                            {migrationResult.errors && migrationResult.errors.length > 0 && (
+                              <div className="mt-2">
+                                <div className="small text-danger">오류:</div>
+                                {migrationResult.errors.map((err, index) => (
+                                  <div key={index} className="small text-danger">• {err.block}: {err.error}</div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        
+                        {migrationStatus === 'error' && migrationResult && (
+                          <div>
+                            <h6 className="mb-2 small text-danger">
+                              <i className="bi bi-exclamation-triangle me-1"></i>
+                              마이그레이션 실패
+                            </h6>
+                            <div className="small text-muted">{migrationResult.error}</div>
+                          </div>
+                        )}
+                        
+                        <div className="text-end mt-2">
+                          <button 
+                            className="btn btn-sm btn-outline-secondary"
+                            onClick={() => {
+                              setMigrationStatus('idle');
+                              setMigrationProgress(0);
+                              setMigrationResult(null);
+                            }}
+                          >
+                            <i className="bi bi-x me-1"></i>
+                            닫기
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {blocksLoading ? (
+                      <div className="text-center py-4">
+                        <div className="spinner-border text-brand" role="status">
+                          <span className="visually-hidden">Loading...</span>
+                        </div>
+                        <div className="mt-2 text-muted">Loading blocks...</div>
+                      </div>
+                    ) : (
+                      <div className="vstack gap-2" style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+                        {Object.entries(groupBlocksByCategory(blocks)).map(([category, categoryBlocks]) => (
+                          <div key={category} className="border rounded p-2">
+                            <h6 className="mb-2 small fw-bold text-muted">
+                              <i className={`${getCategoryIcon(category)} me-1`}></i>
+                              {category} ({categoryBlocks.length})
+                            </h6>
+                            <div className="vstack gap-1">
+                              {categoryBlocks.map(block => (
+                                <div key={block.id} className="d-flex align-items-center justify-content-between p-2 border rounded">
+                                  <div className="d-flex align-items-center">
+                                    <i className={`${block.icon} me-2 text-muted`}></i>
+                                    <span className="small">{block.name}</span>
+                                    <span className="badge bg-light text-dark ms-2 small">{block.id}</span>
+                                  </div>
+                                  <div className="btn-group btn-group-sm" role="group">
+                                    <input 
+                                      type="radio" 
+                                      className="btn-check" 
+                                      name={`block-${block.id}`}
+                                      id={`block-${block.id}-default`}
+                                      checked={block.isDefaultBlock === true}
+                                      onChange={() => handleBlockToggle(block.id, true)}
+                                    />
+                                    <label 
+                                      className="btn btn-outline-success btn-sm" 
+                                      htmlFor={`block-${block.id}-default`}
+                                    >
+                                      🔓 Default
+                                    </label>
+                                    
+                                    <input 
+                                      type="radio" 
+                                      className="btn-check" 
+                                      name={`block-${block.id}`}
+                                      id={`block-${block.id}-qr`}
+                                      checked={block.isDefaultBlock === false}
+                                      onChange={() => handleBlockToggle(block.id, false)}
+                                    />
+                                    <label 
+                                      className="btn btn-outline-warning btn-sm" 
+                                      htmlFor={`block-${block.id}-qr`}
+                                    >
+                                      🔒 QR Required
+                                    </label>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* 우측: QR 생성 및 관리 */}
+                <div className="col-lg-6">
+                  <div className="panel p-3">
+                    <div className="d-flex align-items-center justify-content-between mb-3">
+                      <h6 className="mb-0">
+                        <i className="bi bi-qr-code me-2"></i>
+                        QR Code Management
+                      </h6>
+                      <button 
+                        className="btn btn-sm btn-brand"
+                        onClick={() => setShowQRForm(!showQRForm)}
+                      >
+                        <i className="bi bi-plus me-1"></i>
+                        Create QR
+                      </button>
+                    </div>
+
+                    {/* QR 생성 폼 */}
+                    {showQRForm && (
+                      <div className="border rounded p-3 mb-3 bg-light">
+                        <h6 className="mb-2">Create New QR Code</h6>
+                        <form onSubmit={handleCreateQR}>
+                          <div className="mb-2">
+                            <label className="form-label small">QR Name</label>
+                            <input 
+                              type="text" 
+                              className="form-control form-control-sm" 
+                              placeholder="e.g. Week 1 - Logic Blocks"
+                              value={qrFormData.name}
+                              onChange={(e) => setQrFormData(prev => ({ ...prev, name: e.target.value }))}
+                              required
+                            />
+                          </div>
+                          
+                          <div className="mb-2">
+                            <label className="form-label small">Select Block</label>
+                            <select 
+                              className="form-select form-select-sm"
+                              value={selectedBlock}
+                              onChange={(e) => handleBlockSelect(e.target.value)}
+                              required
+                            >
+                              <option value="">Select a block...</option>
+                              {blocks.filter(b => !b.isDefaultBlock).map(block => (
+                                <option key={block.id} value={block.id}>
+                                  <i className={`${block.icon} me-1`}></i>
+                                  {block.name} ({block.category})
+                                </option>
+                              ))}
+                            </select>
+                            <div className="small text-muted mt-1">
+                              {selectedBlock ? `Selected: ${blocks.find(b => b.id === selectedBlock)?.name}` : 'No block selected'}
+                            </div>
+                          </div>
+
+                          <div className="row g-2 mb-3">
+                            <div className="col-6">
+                              <label className="form-label small">Start Date</label>
+                              <input 
+                                type="date" 
+                                className="form-control form-control-sm"
+                                value={qrFormData.startDate}
+                                onChange={(e) => setQrFormData(prev => ({ ...prev, startDate: e.target.value }))}
+                              />
+                            </div>
+                            <div className="col-6">
+                              <label className="form-label small">End Date</label>
+                              <input 
+                                type="date" 
+                                className="form-control form-control-sm"
+                                value={qrFormData.endDate}
+                                onChange={(e) => setQrFormData(prev => ({ ...prev, endDate: e.target.value }))}
+                              />
+                            </div>
+                          </div>
+
+                          <div className="d-flex gap-2">
+                            <button 
+                              type="submit" 
+                              className="btn btn-sm btn-brand"
+                              disabled={loading || !selectedBlock}
+                            >
+                              {loading ? (
+                                <>
+                                  <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                  Creating...
+                                </>
+                              ) : (
+                                <>
+                                  <i className="bi bi-qr-code me-1"></i>
+                                  Generate QR
+                                </>
+                              )}
+                            </button>
+                            <button 
+                              type="button" 
+                              className="btn btn-sm btn-ghost"
+                              onClick={() => {
+                                setShowQRForm(false);
+                                setSelectedBlock('');
+                                setQrFormData({
+                                  name: '',
+                                  block: '',
+                                  isActive: true,
+                                  startDate: '',
+                                  endDate: ''
+                                });
+                              }}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </form>
+                      </div>
+                    )}
+
+                    {/* QR 코드 목록 */}
+                    <div className="vstack gap-2" style={{ maxHeight: '50vh', overflowY: 'auto' }}>
+                      {qrCodesLoading ? (
+                        <div className="text-center py-4">
+                          <div className="spinner-border text-brand" role="status">
+                            <span className="visually-hidden">Loading...</span>
+                          </div>
+                          <div className="mt-2 text-muted">Loading QR codes...</div>
+                        </div>
+                      ) : qrCodes.length === 0 ? (
+                        <div className="text-center py-4 text-muted">
+                          <i className="bi bi-qr-code" style={{ fontSize: '2rem' }}></i>
+                          <div className="mt-2">No QR codes found</div>
+                          <div className="small">Create your first QR code using the button above</div>
+                        </div>
+                      ) : (
+                        qrCodes.map(qrCode => (
+                          <div key={qrCode.id} className="border rounded p-3">
+                            <div className="d-flex align-items-center justify-content-between mb-2">
+                              <div>
+                                <h6 className="mb-0 small fw-semibold">{qrCode.name}</h6>
+                                <div className="small text-muted">
+                                  1 block • {formatDate(qrCode.createdAt)}
+                                </div>
+                              </div>
+                              <div className="d-flex align-items-center gap-2">
+                                <div className="form-check form-switch">
+                                  <input 
+                                    className="form-check-input" 
+                                    type="checkbox" 
+                                    id={`qr-active-${qrCode.id}`}
+                                    checked={qrCode.isActive}
+                                    onChange={(e) => handleQRToggle(qrCode.id, e.target.checked)}
+                                  />
+                                  <label className="form-check-label small" htmlFor={`qr-active-${qrCode.id}`}>
+                                    {qrCode.isActive ? 'Active' : 'Inactive'}
+                                  </label>
+                                </div>
+                                <button 
+                                  className="btn btn-sm btn-outline-primary"
+                                  onClick={() => handleViewQR(qrCode)}
+                                  title="QR 코드 보기"
+                                >
+                                  <i className="bi bi-qr-code"></i>
+                                </button>
+                                <button 
+                                  className="btn btn-sm btn-outline-danger"
+                                  onClick={() => handleDeleteQR(qrCode.id)}
+                                  disabled={loading}
+                                >
+                                  <i className="bi bi-trash"></i>
+                                </button>
+                              </div>
+                            </div>
+                            
+                            <div className="small">
+                              <strong>Block:</strong>
+                              <div className="mt-1">
+                                {(() => {
+                                  const block = blocks.find(b => b.id === qrCode.block);
+                                  return block ? (
+                                    <span className="badge bg-light text-dark small">
+                                      <i className={`${block.icon} me-1`}></i>
+                                      {block.name}
+                                    </span>
+                                  ) : (
+                                    <span className="badge bg-secondary small">
+                                      {qrCode.block}
+                                    </span>
+                                  );
+                                })()}
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </main>
 
       <TabBar />
+      
+      {/* QR 코드 보기 모달 */}
+      {selectedQRCode && (
+        <QRViewModal
+          show={showQRViewModal}
+          onHide={handleCloseQRModal}
+          qrData={selectedQRCode}
+          blockInfo={blocks.find(b => b.id === selectedQRCode.block)}
+        />
+      )}
     </>
   );
 }
