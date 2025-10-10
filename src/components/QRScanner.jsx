@@ -111,12 +111,30 @@ function QRScanner({ onScan, onClose }) {
         };
 
         console.log('🚀 [QRScanner] Rendering scanner...');
+        
+        // DOM 요소가 여전히 존재하는지 다시 확인
+        const qrReaderElementAfter = document.getElementById('qr-reader');
+        if (!qrReaderElementAfter || !isMounted) {
+          console.log('⚠️ [QRScanner] DOM element disappeared during initialization');
+          return;
+        }
+        
         await scanner.render(onScanSuccess, onScanFailure);
         
         if (isMounted) {
           setIsScanning(true);
           scannerRef.current = scanner;
           console.log('✅ [QRScanner] Scanner initialized successfully, isScanning=true');
+          
+          // 렌더링 완료 후 DOM 상태 확인
+          setTimeout(() => {
+            const finalElement = document.getElementById('qr-reader');
+            console.log('🔍 [QRScanner] Final DOM check:', finalElement);
+            if (finalElement) {
+              console.log('📊 [QRScanner] Element children:', finalElement.children.length);
+              console.log('📊 [QRScanner] Element innerHTML length:', finalElement.innerHTML.length);
+            }
+          }, 100);
         }
         
       } catch (err) {
@@ -129,8 +147,8 @@ function QRScanner({ onScan, onClose }) {
       }
     };
 
-    // 약간의 지연 후 초기화 (DOM이 완전히 렌더링된 후)
-    const timer = setTimeout(initializeScanner, 100);
+    // DOM이 완전히 렌더링된 후 초기화 (React Strict Mode 고려하여 지연 시간 증가)
+    const timer = setTimeout(initializeScanner, 500);
 
     return () => {
       isMounted = false;
@@ -295,10 +313,24 @@ function QRScanner({ onScan, onClose }) {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      position: 'relative'
+                      position: 'relative',
+                      width: '100%'
+                    }}
+                    ref={(el) => {
+                      if (el) {
+                        console.log('🎯 [QRScanner] DOM element ref set:', el);
+                      }
                     }}
                   >
-                    {!isScanning && (
+                    {!isScanning && cameraPermission === 'granted' && (
+                      <div className="text-center text-muted">
+                        <div className="spinner-border text-primary mb-2" role="status">
+                          <span className="visually-hidden">Loading...</span>
+                        </div>
+                        <div>카메라를 시작하는 중...</div>
+                      </div>
+                    )}
+                    {!isScanning && cameraPermission !== 'granted' && (
                       <div className="text-center text-muted">
                         <i className="bi bi-camera" style={{ fontSize: '3rem' }}></i>
                         <div className="mt-2">카메라를 초기화하는 중...</div>
