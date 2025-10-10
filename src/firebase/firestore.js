@@ -130,12 +130,17 @@ export const getQuestions = async () => {
 // 문제 추가 (Admin)
 export const addQuestion = async (questionData) => {
   try {
-    const docRef = await addDoc(collection(db, 'questions'), {
-      ...questionData,
+    const { id, ...data } = questionData;
+    const docRef = doc(db, 'questions', id);
+    await setDoc(docRef, {
+      ...data,
+      id: id, // 문서 ID와 필드 ID를 동일하게
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
+      isActive: true,
+      isBuiltIn: false
     });
-    return { success: true, id: docRef.id };
+    return { success: true, id: id };
   } catch (error) {
     return { success: false, error: error.message };
   }
@@ -149,6 +154,17 @@ export const updateQuestion = async (questionId, data) => {
       ...data,
       updatedAt: new Date().toISOString()
     });
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};
+
+// 문제 삭제 (Admin)
+export const deleteQuestion = async (questionId) => {
+  try {
+    const docRef = doc(db, 'questions', questionId);
+    await deleteDoc(docRef);
     return { success: true };
   } catch (error) {
     return { success: false, error: error.message };

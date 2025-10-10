@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import AppBar from '../components/AppBar';
 import TabBar from '../components/TabBar';
+import { getQuestions } from '../firebase/firestore';
+import useToast from '../hooks/useToast';
 
 const QUESTIONS = [
   {
@@ -51,9 +53,40 @@ const DIFF_BADGES = {
 
 function Challenges() {
   const navigate = useNavigate();
+  const [questions, setQuestions] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [diffFilter, setDiffFilter] = useState('all');
   const [tagFilter, setTagFilter] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const { error } = useToast();
+
+  // Firebase에서 문제 목록 불러오기
+  useEffect(() => {
+    loadQuestions();
+  }, []);
+
+  const loadQuestions = async () => {
+    setLoading(true);
+    try {
+      const result = await getQuestions();
+      
+      if (result.success) {
+        // 활성화된 문제만 필터링
+        const activeQuestions = result.data.filter(q => q.isActive !== false);
+        setQuestions(activeQuestions);
+      } else {
+        // Firebase에서 불러오기 실패 시 로컬 데이터 사용
+        setQuestions(QUESTIONS);
+        error('문제 목록을 불러오는데 실패했습니다. 로컬 데이터를 사용합니다.');
+      }
+    } catch (err) {
+      // 에러 시 로컬 데이터 사용
+      setQuestions(QUESTIONS);
+      error('문제 목록을 불러오는데 실패했습니다. 로컬 데이터를 사용합니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const matchesDiff = (q) => diffFilter === 'all' || q.difficulty === diffFilter;
   const matchesTag = (q) => !tagFilter || q.tags.includes(tagFilter);
@@ -76,7 +109,7 @@ function Challenges() {
     setTagFilter(tagFilter === tag ? null : tag);
   };
 
-  const filteredQuestions = QUESTIONS.filter(q => 
+  const filteredQuestions = questions.filter(q => 
     matchesDiff(q) && matchesTag(q) && matchesSearch(q)
   );
 
@@ -151,7 +184,17 @@ function Challenges() {
         </div>
 
         <div className="row g-3">
-          {filteredQuestions.length > 0 ? (
+          {loading ? (
+            <div className="col-12">
+              <div className="panel p-4 text-center">
+                <div className="spinner-border text-brand mb-3" role="status">
+                  <span className="visually-hidden">Loading...</span>
+                </div>
+                <div className="fw-bold">문제를 불러오는 중...</div>
+                <div className="text-muted">잠시만 기다려주세요</div>
+              </div>
+            </div>
+          ) : filteredQuestions.length > 0 ? (
             filteredQuestions.map(q => (
               <div key={q.id} className="col-12">
                 <div className={`q-card diff-${q.difficulty}`}>
