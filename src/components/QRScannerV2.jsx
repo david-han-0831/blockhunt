@@ -32,26 +32,26 @@ function QRScanner({ onScan, onClose }) {
   // 카메라 권한 확인 (실제 스트림 시작하지 않음)
   const checkCameraPermission = useCallback(async () => {
     try {
-      console.log('📸 [QRScanner] Checking camera permission...');
+      console.log('📸 [QRScannerV2] Checking camera permission...');
       
       // 권한 상태만 확인 (스트림 시작하지 않음)
       const permission = await navigator.permissions.query({ name: 'camera' });
       
       if (permission.state === 'granted') {
-        console.log('✅ [QRScanner] Camera permission already granted');
+        console.log('✅ [QRScannerV2] Camera permission already granted');
         setCameraPermission('granted');
         return true;
       } else if (permission.state === 'prompt') {
-        console.log('⚠️ [QRScanner] Camera permission needs to be requested');
+        console.log('⚠️ [QRScannerV2] Camera permission needs to be requested');
         setCameraPermission('pending');
         return false;
       } else {
-        console.log('❌ [QRScanner] Camera permission denied');
+        console.log('❌ [QRScannerV2] Camera permission denied');
         setCameraPermission('denied');
         return false;
       }
     } catch (err) {
-      console.warn('⚠️ [QRScanner] Permission API not supported, will request directly:', err);
+      console.warn('⚠️ [QRScannerV2] Permission API not supported, will request directly:', err);
       setCameraPermission('pending');
       return false;
     }
@@ -60,58 +60,62 @@ function QRScanner({ onScan, onClose }) {
   // 안전한 cleanup 함수
   const safeCleanup = useCallback(() => {
     try {
-      console.log('🧹 [QRScanner] Starting cleanup...');
+      console.log('🧹 [QRScannerV2] Starting cleanup...');
       
-      // 1. 스캐너 정리
       if (scannerRef.current) {
         try {
           scannerRef.current.clear();
-          console.log('✅ [QRScanner] Scanner cleared successfully');
+          console.log('✅ [QRScannerV2] Scanner cleared successfully');
         } catch (clearErr) {
-          console.warn('⚠️ [QRScanner] Scanner clear failed (ignored):', clearErr);
+          console.warn('⚠️ [QRScannerV2] Scanner clear failed (ignored):', clearErr);
         }
         scannerRef.current = null;
       }
       
-      // 2. 미디어 스트림 정리 (DOM 조작 없이)
+      // DOM 요소 정리
       if (containerRef.current) {
         try {
           const videoElements = containerRef.current.querySelectorAll('video');
-          videoElements.forEach(video => {
+          const canvasElements = containerRef.current.querySelectorAll('canvas');
+          
+          [...videoElements, ...canvasElements].forEach(element => {
             try {
-              if (video.srcObject) {
-                video.srcObject.getTracks().forEach(track => track.stop());
+              if (element.srcObject) {
+                element.srcObject.getTracks().forEach(track => track.stop());
+              }
+              if (element.parentNode) {
+                element.parentNode.removeChild(element);
               }
             } catch (err) {
-              console.warn('⚠️ [QRScanner] Error stopping video tracks:', err);
+              console.warn('⚠️ [QRScannerV2] Error removing element:', err);
             }
           });
+          
+          containerRef.current.innerHTML = '';
+          console.log('✅ [QRScannerV2] Container cleared');
         } catch (err) {
-          console.warn('⚠️ [QRScanner] Error cleaning video tracks:', err);
+          console.warn('⚠️ [QRScannerV2] Container cleanup error (ignored):', err);
         }
       }
       
-      // 3. 상태 초기화
       setIsInitialized(false);
       setIsScanning(false);
       setError(null);
       
-      console.log('✅ [QRScanner] Cleanup completed');
-      
     } catch (err) {
-      console.warn('⚠️ [QRScanner] Cleanup error (ignored):', err);
+      console.warn('⚠️ [QRScannerV2] Cleanup error (ignored):', err);
     }
   }, []);
 
   // 스캐너 초기화
   const initializeScanner = useCallback(async () => {
     if (isInitialized || scannerRef.current) {
-      console.log('⚠️ [QRScanner] Scanner already initialized, skipping...');
+      console.log('⚠️ [QRScannerV2] Scanner already initialized, skipping...');
       return;
     }
 
     try {
-      console.log('🔍 [QRScanner] Starting scanner initialization...');
+      console.log('🔍 [QRScannerV2] Starting scanner initialization...');
       setError(null);
       
       // 1. DOM 요소 준비
@@ -119,45 +123,40 @@ function QRScanner({ onScan, onClose }) {
         throw new Error('Container ref not available');
       }
       
-      console.log('🎯 [QRScanner] Container ready');
+      console.log('🎯 [QRScannerV2] Container ready');
       
       // 2. 기존 내용 정리
       containerRef.current.innerHTML = '';
       
       // 3. Html5QrcodeScanner 생성
-      console.log('🎥 [QRScanner] Creating scanner...');
-      
-      // 모바일 환경 감지
-      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-      
+      console.log('🎥 [QRScannerV2] Creating scanner...');
       const scanner = new Html5QrcodeScanner(
         containerRef.current.id,
         { 
-          fps: isMobile ? 5 : 10, // 모바일에서는 FPS 낮춤
-          qrbox: isMobile ? { width: 200, height: 200 } : { width: 250, height: 250 },
+          fps: 10, 
+          qrbox: { width: 250, height: 250 },
           aspectRatio: 1.0,
           showTorchButtonIfSupported: true,
-          showZoomSliderIfSupported: !isMobile, // 모바일에서는 줌 슬라이더 숨김
+          showZoomSliderIfSupported: true,
           useBarCodeDetectorIfSupported: true,
           rememberLastUsedCamera: true,
-          // 모바일 환경에 최적화된 카메라 제약 조건
+          // 카메라 제약 조건을 더 유연하게 설정
           videoConstraints: {
             facingMode: { ideal: 'environment' },
-            width: isMobile ? { ideal: 640, max: 1280 } : { ideal: 1280, max: 1920 },
-            height: isMobile ? { ideal: 480, max: 720 } : { ideal: 720, max: 1080 }
+            width: { ideal: 1280, max: 1920 },
+            height: { ideal: 720, max: 1080 }
           }
         },
         false // verbose 모드 비활성화
       );
 
       // 4. 렌더링
-      console.log('🚀 [QRScanner] Rendering scanner...');
+      console.log('🚀 [QRScannerV2] Rendering scanner...');
       setIsScanning(true);
       
       await scanner.render(
         (decodedText) => {
-          console.log('✅ [QRScanner] QR Code scanned:', decodedText);
+          console.log('✅ [QRScannerV2] QR Code scanned:', decodedText);
           setIsScanning(false);
           
           // 스캔 성공 시 cleanup (모달 닫기 전에)
@@ -169,7 +168,7 @@ function QRScanner({ onScan, onClose }) {
         (error) => {
           // 스캔 실패는 정상적인 상황 (로그만 출력)
           if (error && !error.includes('No QR code found')) {
-            console.log('📷 [QRScanner] Scan error (normal):', error);
+            console.log('📷 [QRScannerV2] Scan error (normal):', error);
           }
         }
       );
@@ -177,17 +176,17 @@ function QRScanner({ onScan, onClose }) {
       scannerRef.current = scanner;
       setIsInitialized(true);
       setCameraPermission('granted');
-      console.log('✅ [QRScanner] Scanner ready!');
+      console.log('✅ [QRScannerV2] Scanner ready!');
       
     } catch (err) {
-      console.error('❌ [QRScanner] Initialization failed:', err);
+      console.error('❌ [QRScannerV2] Initialization failed:', err);
       setError(`QR 스캐너 초기화 실패: ${err.message}`);
       setCameraPermission('denied');
       setIsScanning(false);
       
       // 재시도 로직
       if (retryCount < maxRetries) {
-        console.log(`🔄 [QRScanner] Retrying... (${retryCount + 1}/${maxRetries})`);
+        console.log(`🔄 [QRScannerV2] Retrying... (${retryCount + 1}/${maxRetries})`);
         setRetryCount(prev => prev + 1);
         setTimeout(() => {
           initializeScanner();
@@ -243,7 +242,7 @@ function QRScanner({ onScan, onClose }) {
   return (
     <div className="modal-backdrop show" onClick={handleClose}>
       <div className="modal show d-block" tabIndex="-1">
-        <div className={`modal-dialog modal-dialog-centered ${/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ? 'modal-fullscreen-sm-down' : 'modal-lg'}`} onClick={(e) => e.stopPropagation()}>
+        <div className="modal-dialog modal-dialog-centered modal-lg" onClick={(e) => e.stopPropagation()}>
           <div className="modal-content">
             <div className="modal-header">
               <h5 className="modal-title">
@@ -263,14 +262,6 @@ function QRScanner({ onScan, onClose }) {
                 <div className="alert alert-warning mb-3">
                   <i className="bi bi-exclamation-triangle me-2"></i>
                   <strong>주의:</strong> 카메라는 HTTPS 연결에서만 작동합니다.
-                </div>
-              )}
-
-              {/* 모바일 환경 안내 */}
-              {/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) && (
-                <div className="alert alert-info mb-3">
-                  <i className="bi bi-phone me-2"></i>
-                  <strong>모바일 최적화:</strong> 모바일 환경에 맞게 최적화된 QR 스캐너입니다.
                 </div>
               )}
 
