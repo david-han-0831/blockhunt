@@ -20,6 +20,9 @@ function QRScannerWebRTC({ onScan, onClose }) {
   const [manualQRData, setManualQRData] = useState('');
   const [cameraPermission, setCameraPermission] = useState('pending');
   const [isInitialized, setIsInitialized] = useState(false);
+  const [availableCameras, setAvailableCameras] = useState([]);
+  const [currentCameraIndex, setCurrentCameraIndex] = useState(0);
+  const [isSwitchingCamera, setIsSwitchingCamera] = useState(false);
 
   // 카메라 스트림 정리
   const stopCamera = useCallback(() => {
@@ -43,6 +46,35 @@ function QRScannerWebRTC({ onScan, onClose }) {
     }
   }, []);
 
+  // 카메라 전환
+  const switchCamera = useCallback(async () => {
+    if (availableCameras.length <= 1 || isSwitchingCamera) {
+      return;
+    }
+
+    try {
+      setIsSwitchingCamera(true);
+      console.log('🔄 [QRScannerWebRTC] Switching camera...');
+      
+      // 현재 스캐너 정지
+      stopQRScanner();
+      stopCamera();
+      
+      // 다음 카메라 인덱스 계산
+      const nextIndex = (currentCameraIndex + 1) % availableCameras.length;
+      setCurrentCameraIndex(nextIndex);
+      
+      // 잠시 대기 후 새 카메라로 시작
+      setTimeout(() => {
+        startQRScannerWithCamera(availableCameras[nextIndex].id);
+      }, 500);
+      
+    } catch (err) {
+      console.error('❌ [QRScannerWebRTC] Camera switch failed:', err);
+      setIsSwitchingCamera(false);
+    }
+  }, [availableCameras, currentCameraIndex, isSwitchingCamera, stopQRScanner, stopCamera]);
+
   // 안전한 cleanup
   const safeCleanup = useCallback(() => {
     console.log('🧹 [QRScannerWebRTC] Starting cleanup...');
@@ -51,18 +83,14 @@ function QRScannerWebRTC({ onScan, onClose }) {
     setIsScanning(false);
     setIsInitialized(false);
     setError(null);
+    setIsSwitchingCamera(false);
     console.log('✅ [QRScannerWebRTC] Cleanup completed');
   }, [stopQRScanner, stopCamera]);
 
-  // QR 스캐너 시작
-  const startQRScanner = useCallback(async () => {
-    if (isInitialized) {
-      console.log('⚠️ [QRScannerWebRTC] Already initialized, skipping...');
-      return;
-    }
-
+  // 특정 카메라로 QR 스캐너 시작
+  const startQRScannerWithCamera = useCallback(async (cameraId) => {
     try {
-      console.log('🔍 [QRScannerWebRTC] Starting QR scanner...');
+      console.log('🔍 [QRScannerWebRTC] Starting QR scanner with camera:', cameraId);
       setError(null);
       setIsScanning(true);
 
@@ -76,17 +104,6 @@ function QRScannerWebRTC({ onScan, onClose }) {
         qrbox: { width: 250, height: 250 },
         aspectRatio: 1.0
       };
-
-      // 후면 카메라 사용
-      const cameraId = await Html5Qrcode.getCameras().then(cameras => {
-        // 후면 카메라 우선 선택
-        const backCamera = cameras.find(camera => 
-          camera.label.toLowerCase().includes('back') || 
-          camera.label.toLowerCase().includes('rear') ||
-          camera.label.toLowerCase().includes('environment')
-        );
-        return backCamera ? backCamera.id : cameras[0].id;
-      });
 
       await qrCode.start(
         cameraId,
@@ -111,7 +128,48 @@ function QRScannerWebRTC({ onScan, onClose }) {
 
       setIsInitialized(true);
       setCameraPermission('granted');
+      setIsSwitchingCamera(false);
       console.log('✅ [QRScannerWebRTC] QR scanner ready!');
+
+    } catch (err) {
+      console.error('❌ [QRScannerWebRTC] QR scanner failed:', err);
+      setError(`QR 스캐너 초기화 실패: ${err.message}`);
+      setCameraPermission('denied');
+      setIsScanning(false);
+      setIsSwitchingCamera(false);
+      safeCleanup();
+    }
+  }, [onScan, safeCleanup]);
+
+  // QR 스캐너 시작
+  const startQRScanner = useCallback(async () => {
+    if (isInitialized) {
+      console.log('⚠️ [QRScannerWebRTC] Already initialized, skipping...');
+      return;
+    }
+
+    try {
+      console.log('🔍 [QRScannerWebRTC] Starting QR scanner...');
+      setError(null);
+      setIsScanning(true);
+
+      // 사용 가능한 카메라 목록 가져오기
+      const cameras = await Html5Qrcode.getCameras();
+      setAvailableCameras(cameras);
+      console.log('📷 [QRScannerWebRTC] Available cameras:', cameras.length);
+
+      // 후면 카메라 우선 선택
+      const backCameraIndex = cameras.findIndex(camera => 
+        camera.label.toLowerCase().includes('back') || 
+        camera.label.toLowerCase().includes('rear') ||
+        camera.label.toLowerCase().includes('environment')
+      );
+      
+      const initialCameraIndex = backCameraIndex >= 0 ? backCameraIndex : 0;
+      setCurrentCameraIndex(initialCameraIndex);
+      
+      // 선택된 카메라로 스캐너 시작
+      await startQRScannerWithCamera(cameras[initialCameraIndex].id);
 
     } catch (err) {
       console.error('❌ [QRScannerWebRTC] QR scanner failed:', err);
@@ -120,7 +178,7 @@ function QRScannerWebRTC({ onScan, onClose }) {
       setIsScanning(false);
       safeCleanup();
     }
-  }, [isInitialized, onScan, safeCleanup]);
+  }, [isInitialized, startQRScannerWithCamera, safeCleanup]);
 
   // 컴포넌트 마운트 시 초기화
   useEffect(() => {
@@ -321,7 +379,29 @@ function QRScannerWebRTC({ onScan, onClose }) {
                     </ul>
                   </div>
                   
-                  <div className="text-center">
+                  <div className="d-flex gap-2 justify-content-center flex-wrap">
+                    {/* 카메라 전환 버튼 */}
+                    {availableCameras.length > 1 && (
+                      <button 
+                        className="btn btn-outline-secondary btn-sm"
+                        onClick={switchCamera}
+                        disabled={isSwitchingCamera}
+                      >
+                        {isSwitchingCamera ? (
+                          <>
+                            <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                            전환 중...
+                          </>
+                        ) : (
+                          <>
+                            <i className="bi bi-camera-reels me-1"></i>
+                            카메라 전환
+                          </>
+                        )}
+                      </button>
+                    )}
+                    
+                    {/* 수동 입력 버튼 */}
                     <button 
                       className="btn btn-outline-primary btn-sm"
                       onClick={() => setShowManualInput(true)}
@@ -330,6 +410,21 @@ function QRScannerWebRTC({ onScan, onClose }) {
                       QR 데이터 직접 입력 (테스트용)
                     </button>
                   </div>
+                  
+                  {/* 현재 카메라 정보 */}
+                  {availableCameras.length > 0 && (
+                    <div className="text-center mt-2">
+                      <small className="text-muted">
+                        <i className="bi bi-camera me-1"></i>
+                        현재 카메라: {availableCameras[currentCameraIndex]?.label || '알 수 없음'}
+                        {availableCameras.length > 1 && (
+                          <span className="ms-2">
+                            ({currentCameraIndex + 1}/{availableCameras.length})
+                          </span>
+                        )}
+                      </small>
+                    </div>
+                  )}
                 </>
               )}
             </div>
