@@ -437,6 +437,12 @@ function QRScannerWebRTC({ onScan, onClose }) {
                   </div>
                   
                   <div className="d-flex gap-2 justify-content-center flex-wrap">
+                    {/* 디버깅 정보 */}
+                    <div className="w-100 text-center text-muted small mb-2">
+                      디버그: 카메라 {availableCameras.length}개 감지됨 | 
+                      모바일: {/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ? '예' : '아니오'}
+                    </div>
+                    
                     {/* 카메라 전환 버튼 */}
                     {availableCameras.length > 1 && (
                       <button 
@@ -458,26 +464,24 @@ function QRScannerWebRTC({ onScan, onClose }) {
                       </button>
                     )}
                     
-                    {/* 모바일에서 카메라가 1개만 감지되어도 전환 버튼 표시 */}
-                    {availableCameras.length === 1 && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) && (
-                      <button 
-                        className="btn btn-outline-secondary btn-sm"
-                        onClick={switchCamera}
-                        disabled={isSwitchingCamera}
-                      >
-                        {isSwitchingCamera ? (
-                          <>
-                            <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
-                            전환 중...
-                          </>
-                        ) : (
-                          <>
-                            <i className="bi bi-camera-reels me-1"></i>
-                            카메라 전환
-                          </>
-                        )}
-                      </button>
-                    )}
+                    {/* 임시: 항상 카메라 전환 버튼 표시 (디버깅용) */}
+                    <button 
+                      className="btn btn-outline-secondary btn-sm"
+                      onClick={switchCamera}
+                      disabled={isSwitchingCamera}
+                    >
+                      {isSwitchingCamera ? (
+                        <>
+                          <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                          전환 중...
+                        </>
+                      ) : (
+                        <>
+                          <i className="bi bi-camera-reels me-1"></i>
+                          카메라 전환
+                        </>
+                      )}
+                    </button>
                     
                     {/* 수동 입력 버튼 */}
                     <button 
