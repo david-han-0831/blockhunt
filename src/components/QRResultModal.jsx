@@ -97,3 +97,4 @@ function QRResultModal({ isOpen, result, onClose }) {
 }
 
 export default QRResultModal;
+

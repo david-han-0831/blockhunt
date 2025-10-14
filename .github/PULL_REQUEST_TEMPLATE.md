@@ -1,76 +1,68 @@
 # 📌 Pull Request 개요
 
 ## ✅ 변경 요약
-QR 코드 생성 및 스캔 기능을 구현하여 사용자가 실제 QR 코드를 통해 블록을 잠금 해제할 수 있도록 완성
+QR 코드 생성 및 스캔 기능 구현 - 학생들이 QR 코드를 스캔하여 블록을 획득하는 전체 흐름 완성
 
 ## 🔍 주요 변경 사항
-- [x] Admin 페이지에서 QR 코드 생성 및 미리보기 기능 구현
-- [x] QRViewModal 컴포넌트 신규 생성 (QR 이미지 표시, 다운로드, 데이터 복사)
-- [x] Challenges 페이지 Scan FAB 버튼에 QR 스캐너 연결
-- [x] QR 스캔 후 블록 자동 잠금 해제 로직 구현
-- [x] qrcode 라이브러리 추가 (QR 이미지 생성용)
-- [x] QR 데이터 타입 통일 (blockhunt_blocks)
+- [x] QR 코드 생성 및 미리보기 기능 (QRViewModal 컴포넌트)
+- [x] QR 코드 다운로드 및 데이터 복사 기능
+- [x] Challenges 페이지에 QR 스캐너 연결
+- [x] 블록 잠금 해제 로직 완성 (processQRScan)
+- [x] 중복 스캔 감지 및 사용자 피드백
+- [x] 카메라 권한 처리 및 에러 핸들링
+- [x] 수동 입력 옵션 제공 (테스트용)
 
 ## 💡 구현 배경 및 상세 설명
 
-### 문제점
-- Admin에서 QR 코드를 생성했지만, 실제 QR 이미지를 확인할 수 없었음
-- Challenges 페이지의 Scan 버튼이 작동하지 않았음
-- QR 스캔 후 블록 잠금 해제 흐름이 완성되지 않았음
+### 배경
+교육용 블록 코딩 플랫폼에서 학생들이 실제 QR 코드를 스캔하여 블록을 수집할 수 있는 게임화 요소를 추가하기 위해 구현했습니다.
 
-### 해결 방법
+### 주요 구현 내용
 
-**1. QR 코드 생성 및 미리보기**
-- `qrcode` npm 라이브러리를 사용하여 Canvas에 QR 코드 렌더링
-- QRViewModal 컴포넌트 생성: 모달로 QR 코드 표시
-- QR 데이터를 JSON 형식으로 인코딩
-- PNG 이미지 다운로드 기능 제공
-- 개발자용 QR 데이터 복사 기능 추가
+#### 1. QR 코드 생성 (Admin)
+- `qrcode` 라이브러리를 사용하여 Canvas에 QR 코드 렌더링
+- QR 데이터 형식 표준화 (`blockhunt_blocks` 타입)
+- PNG 이미지 다운로드 기능
+- QR 코드 미리보기 모달 (QRViewModal)
 
-**2. QR 스캐너 연결**
-- Challenges 페이지의 Scan FAB 버튼에 onClick 이벤트 추가
-- 로그인 상태 검증
-- QRScanner 모달을 조건부 렌더링
-- html5-qrcode 라이브러리로 카메라 기반 스캔
-- 수동 입력 옵션 제공 (테스트용)
+#### 2. QR 스캔 (Student)
+- `html5-qrcode` 라이브러리를 활용한 카메라 스캔
+- 카메라 권한 요청 및 에러 처리
+- React와 DOM 조작의 충돌 방지 (useCallback, 비동기 초기화)
+- 스캔 결과 피드백 (QRResultModal)
 
-**3. 블록 잠금 해제 로직**
-- Firebase `processQRScan` 함수 호출
-- QR 데이터 파싱 및 검증
-- 사용자의 collectedBlocks 배열에 블록 ID 추가
-- qrScanHistory에 스캔 기록 저장
-- 중복 스캔 감지 및 적절한 피드백 제공
+#### 3. 블록 잠금 해제
+- Firebase `processQRScan` 함수 연동
+- 사용자의 `collectedBlocks` 배열에 블록 추가
+- 중복 스캔 감지 및 알림
+- `qrScanHistory`에 스캔 기록 저장
 
 ### 기술적 고려 사항
+- **React와 html5-qrcode 라이브러리 충돌 해결**: 
+  - DOM 조작을 React 렌더링 사이클 밖에서 처리
+  - useCallback과 useEffect를 활용한 안정적인 초기화
+  - 컴포넌트 언마운트 시 안전한 cleanup
 
-**QR 데이터 형식**
-```json
-{
-  "type": "blockhunt_blocks",
-  "qrId": "생성된QR코드ID",
-  "block": "controls_if",
-  "name": "Week 1 - Logic Blocks",
-  "timestamp": "2025-10-10T10:00:00.000Z"
-}
-```
+- **카메라 권한 처리**:
+  - 명시적인 권한 상태 관리 (pending/granted/denied)
+  - 권한 거부 시 사용자 안내 메시지
+  - HTTPS 요구사항 경고
 
-**사용자 흐름**
-1. Admin이 QR 코드 생성 → 자동으로 미리보기 표시
-2. QR 이미지 다운로드 후 출력 또는 공유
-3. 학생이 Challenges 페이지에서 Scan 버튼 클릭
-4. 카메라로 QR 코드 스캔
-5. 블록 자동 잠금 해제 및 토스트 알림
-6. Studio에서 획득한 블록 사용 가능
+- **사용자 경험 개선**:
+  - 로딩 상태 표시
+  - 명확한 에러 메시지
+  - 테스트를 위한 수동 입력 옵션
 
 ## 🙋 향후 계획 / TODO
-- [ ] QR 코드 만료 기능 활성화 (startDate, endDate 검증)
-- [ ] QR 코드 스캔 통계 대시보드
+- [ ] QR 코드 만료 기능 구현 (startDate, endDate 활용)
+- [ ] QR 코드 스캔 횟수 제한 기능
+- [ ] QR 코드 분석 대시보드 (스캔 통계)
 - [ ] 배치 QR 코드 생성 기능
 - [ ] QR 코드 디자인 커스터마이징 (색상, 로고)
-- [ ] 레어 블록, 이벤트 블록 등 게임화 요소
+- [ ] 실제 교육 현장 테스트 및 피드백 반영
 - [ ] 팀별 블록 수집 경쟁 모드
 
 ## 🔗 관련 링크
 - DevLog: `docs/devlog/2025-10-10-02-qr-code-scan-feature.md`
-- QR Blocks Schema: `docs/qr-blocks-schema.md`
-- Firebase Functions: `processQRScan`, `createQRCode`, `getQRCodes`
+- 관련 문서: `docs/qr-blocks-schema.md`
+- Firebase 함수: `processQRScan`, `createQRCode`, `getQRCodes`
