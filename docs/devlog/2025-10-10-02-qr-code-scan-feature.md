@@ -105,3 +105,4 @@
 - 관련 문서: `docs/qr-blocks-schema.md`
 - Firebase 함수: `processQRScan`, `createQRCode`, `getQRCodes`
 
+
