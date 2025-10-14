@@ -557,6 +557,7 @@ function QRScannerWebRTC({ onScan, onClose }) {
                     setShowSuccessModal(false);
                     setScannedData('');
                     safeCleanup();
+                    onClose(); // 스캐너 모달 닫기
                   }}
                 >
                   <i className="bi bi-check-lg me-1"></i>

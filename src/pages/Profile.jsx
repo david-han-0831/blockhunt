@@ -161,7 +161,7 @@ function Profile() {
           // Firebase에서 최신 데이터 다시 로드
           await loadUserData();
         }
-        setShowScanner(false);
+        // setShowScanner(false); // QR 스캐너 내부에서 처리하도록 제거
       } else {
         error('QR 코드 처리 실패: ' + result.error);
       }

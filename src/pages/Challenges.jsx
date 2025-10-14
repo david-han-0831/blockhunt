@@ -135,7 +135,7 @@ function Challenges() {
         } else {
           success(`새로운 블록을 획득했습니다! 🎉\n총 ${result.totalBlocks}개의 블록 보유`);
         }
-        setShowQRScanner(false);
+        // setShowQRScanner(false); // QR 스캐너 내부에서 처리하도록 제거
       } else {
         error('QR 코드 처리 실패: ' + result.error);
       }
