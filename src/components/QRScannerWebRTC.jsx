@@ -103,10 +103,8 @@ function QRScannerWebRTC({ onScan, onClose }) {
                   setIsScanning(false);
                   setScannedData(decodedText);
                   setShowSuccessModal(true);
-                  setTimeout(() => {
-                    safeCleanup();
-                    onScan(decodedText);
-                  }, 100);
+                  // 모달이 표시된 후 onScan 호출
+                  onScan(decodedText);
                 },
                 (error) => {
                   if (error && !error.includes('No QR code found')) {
@@ -176,11 +174,8 @@ function QRScannerWebRTC({ onScan, onClose }) {
           setScannedData(decodedText);
           setShowSuccessModal(true);
           
-          // 스캔 성공 시 cleanup
-          setTimeout(() => {
-            safeCleanup();
-            onScan(decodedText);
-          }, 100);
+          // 모달이 표시된 후 onScan 호출
+          onScan(decodedText);
         },
         (error) => {
           // 스캔 실패는 정상적인 상황
@@ -561,6 +556,7 @@ function QRScannerWebRTC({ onScan, onClose }) {
                   onClick={() => {
                     setShowSuccessModal(false);
                     setScannedData('');
+                    safeCleanup();
                   }}
                 >
                   <i className="bi bi-check-lg me-1"></i>
