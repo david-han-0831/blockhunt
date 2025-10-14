@@ -48,7 +48,7 @@ function QRScannerWebRTC({ onScan, onClose }) {
 
   // 카메라 전환
   const switchCamera = useCallback(async () => {
-    if (availableCameras.length <= 1 || isSwitchingCamera) {
+    if (isSwitchingCamera) {
       return;
     }
 
@@ -60,20 +60,77 @@ function QRScannerWebRTC({ onScan, onClose }) {
       stopQRScanner();
       stopCamera();
       
-      // 다음 카메라 인덱스 계산
-      const nextIndex = (currentCameraIndex + 1) % availableCameras.length;
-      setCurrentCameraIndex(nextIndex);
-      
-      // 잠시 대기 후 새 카메라로 시작
-      setTimeout(() => {
-        startQRScannerWithCamera(availableCameras[nextIndex].id);
-      }, 500);
+      if (availableCameras.length > 1) {
+        // 여러 카메라가 있는 경우: 다음 카메라로 전환
+        const nextIndex = (currentCameraIndex + 1) % availableCameras.length;
+        setCurrentCameraIndex(nextIndex);
+        
+        setTimeout(() => {
+          startQRScannerWithCamera(availableCameras[nextIndex].id);
+        }, 500);
+      } else {
+        // 카메라가 1개만 감지된 경우: facingMode로 전환 시도
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        if (isMobile) {
+          console.log('🔄 [QRScannerWebRTC] Trying to switch facingMode...');
+          
+          // 현재 facingMode와 반대로 설정
+          const currentFacingMode = currentCameraIndex === 0 ? 'environment' : 'user';
+          const newFacingMode = currentFacingMode === 'environment' ? 'user' : 'environment';
+          
+          // 새로운 facingMode로 카메라 재시작
+          setTimeout(async () => {
+            try {
+              const qrCode = new Html5Qrcode('qr-reader-webrtc');
+              qrCodeRef.current = qrCode;
+              
+              const config = {
+                fps: 10,
+                qrbox: { width: 250, height: 250 },
+                aspectRatio: 1.0,
+                videoConstraints: {
+                  facingMode: newFacingMode
+                }
+              };
+              
+              await qrCode.start(
+                config,
+                (decodedText) => {
+                  console.log('✅ [QRScannerWebRTC] QR Code scanned:', decodedText);
+                  setIsScanning(false);
+                  setTimeout(() => {
+                    safeCleanup();
+                    onScan(decodedText);
+                  }, 100);
+                },
+                (error) => {
+                  if (error && !error.includes('No QR code found')) {
+                    console.log('📷 [QRScannerWebRTC] Scan error (normal):', error);
+                  }
+                }
+              );
+              
+              setIsInitialized(true);
+              setCameraPermission('granted');
+              setIsSwitchingCamera(false);
+              setCurrentCameraIndex(currentCameraIndex === 0 ? 1 : 0);
+              console.log('✅ [QRScannerWebRTC] Camera switched to:', newFacingMode);
+              
+            } catch (err) {
+              console.error('❌ [QRScannerWebRTC] FacingMode switch failed:', err);
+              setIsSwitchingCamera(false);
+              // 실패 시 원래 카메라로 복구
+              startQRScanner();
+            }
+          }, 500);
+        }
+      }
       
     } catch (err) {
       console.error('❌ [QRScannerWebRTC] Camera switch failed:', err);
       setIsSwitchingCamera(false);
     }
-  }, [availableCameras, currentCameraIndex, isSwitchingCamera, stopQRScanner, stopCamera]);
+  }, [availableCameras, currentCameraIndex, isSwitchingCamera, stopQRScanner, stopCamera, startQRScannerWithCamera, safeCleanup, onScan]);
 
   // 안전한 cleanup
   const safeCleanup = useCallback(() => {
@@ -401,6 +458,27 @@ function QRScannerWebRTC({ onScan, onClose }) {
                       </button>
                     )}
                     
+                    {/* 모바일에서 카메라가 1개만 감지되어도 전환 버튼 표시 */}
+                    {availableCameras.length === 1 && /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) && (
+                      <button 
+                        className="btn btn-outline-secondary btn-sm"
+                        onClick={switchCamera}
+                        disabled={isSwitchingCamera}
+                      >
+                        {isSwitchingCamera ? (
+                          <>
+                            <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                            전환 중...
+                          </>
+                        ) : (
+                          <>
+                            <i className="bi bi-camera-reels me-1"></i>
+                            카메라 전환
+                          </>
+                        )}
+                      </button>
+                    )}
+                    
                     {/* 수동 입력 버튼 */}
                     <button 
                       className="btn btn-outline-primary btn-sm"
@@ -416,7 +494,11 @@ function QRScannerWebRTC({ onScan, onClose }) {
                     <div className="text-center mt-2">
                       <small className="text-muted">
                         <i className="bi bi-camera me-1"></i>
-                        현재 카메라: {availableCameras[currentCameraIndex]?.label || '알 수 없음'}
+                        현재 카메라: {
+                          availableCameras.length > 1 
+                            ? (availableCameras[currentCameraIndex]?.label || '알 수 없음')
+                            : (currentCameraIndex === 0 ? '후면 카메라' : '전면 카메라')
+                        }
                         {availableCameras.length > 1 && (
                           <span className="ms-2">
                             ({currentCameraIndex + 1}/{availableCameras.length})
