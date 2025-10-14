@@ -18,6 +18,8 @@ function QRScannerWebRTC({ onScan, onClose }) {
   const [error, setError] = useState(null);
   const [showManualInput, setShowManualInput] = useState(false);
   const [manualQRData, setManualQRData] = useState('');
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [scannedData, setScannedData] = useState('');
   const [cameraPermission, setCameraPermission] = useState('pending');
   const [isInitialized, setIsInitialized] = useState(false);
   const [availableCameras, setAvailableCameras] = useState([]);
@@ -99,6 +101,8 @@ function QRScannerWebRTC({ onScan, onClose }) {
                 (decodedText) => {
                   console.log('✅ [QRScannerWebRTC] QR Code scanned:', decodedText);
                   setIsScanning(false);
+                  setScannedData(decodedText);
+                  setShowSuccessModal(true);
                   setTimeout(() => {
                     safeCleanup();
                     onScan(decodedText);
@@ -169,6 +173,8 @@ function QRScannerWebRTC({ onScan, onClose }) {
         (decodedText) => {
           console.log('✅ [QRScannerWebRTC] QR Code scanned:', decodedText);
           setIsScanning(false);
+          setScannedData(decodedText);
+          setShowSuccessModal(true);
           
           // 스캔 성공 시 cleanup
           setTimeout(() => {
@@ -524,6 +530,47 @@ function QRScannerWebRTC({ onScan, onClose }) {
           </div>
         </div>
       </div>
+      
+      {/* QR 스캔 성공 모달 */}
+      {showSuccessModal && (
+        <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content">
+              <div className="modal-header bg-success text-white">
+                <h5 className="modal-title">
+                  <i className="bi bi-check-circle-fill me-2"></i>
+                  QR 코드 스캔 성공!
+                </h5>
+              </div>
+              <div className="modal-body text-center">
+                <div className="mb-3">
+                  <i className="bi bi-qr-code-scan text-success" style={{ fontSize: '3rem' }}></i>
+                </div>
+                <h6 className="mb-3">스캔된 데이터:</h6>
+                <div className="alert alert-light border">
+                  <code className="text-break">{scannedData}</code>
+                </div>
+                <p className="text-muted small">
+                  블록을 획득했습니다! 🎉
+                </p>
+              </div>
+              <div className="modal-footer">
+                <button 
+                  type="button" 
+                  className="btn btn-success" 
+                  onClick={() => {
+                    setShowSuccessModal(false);
+                    setScannedData('');
+                  }}
+                >
+                  <i className="bi bi-check-lg me-1"></i>
+                  확인
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
