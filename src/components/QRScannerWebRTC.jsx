@@ -131,7 +131,7 @@ function QRScannerWebRTC({ onScan, onClose }) {
       console.error('❌ [QRScannerWebRTC] Camera switch failed:', err);
       setIsSwitchingCamera(false);
     }
-  }, [availableCameras, currentCameraIndex, isSwitchingCamera, stopQRScanner, stopCamera, startQRScannerWithCamera, onScan]);
+  }, [availableCameras, currentCameraIndex, isSwitchingCamera, stopQRScanner, stopCamera, onScan]);
 
   // 안전한 cleanup
   const safeCleanup = useCallback(() => {
@@ -236,7 +236,7 @@ function QRScannerWebRTC({ onScan, onClose }) {
       setIsScanning(false);
       safeCleanup();
     }
-  }, [isInitialized, startQRScannerWithCamera]);
+  }, [isInitialized]);
 
   // 컴포넌트 마운트 시 초기화
   useEffect(() => {
