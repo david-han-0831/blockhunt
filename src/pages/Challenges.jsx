@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import AppBar from '../components/AppBar';
 import TabBar from '../components/TabBar';
-import QRScanner from '../components/QRScanner';
+import QRScannerWebRTC from '../components/QRScannerWebRTC';
 import { getQuestions, processQRScan } from '../firebase/firestore';
 import { useAuth } from '../contexts/AuthContext';
 import useToast from '../hooks/useToast';
@@ -304,7 +304,7 @@ function Challenges() {
 
       {/* QR 스캐너 모달 */}
       {showQRScanner && (
-        <QRScanner
+        <QRScannerWebRTC
           onScan={handleQRScan}
           onClose={() => setShowQRScanner(false)}
         />

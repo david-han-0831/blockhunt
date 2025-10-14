@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import AppBar from '../components/AppBar';
 import TabBar from '../components/TabBar';
-import QRScanner from '../components/QRScanner';
+import QRScannerWebRTC from '../components/QRScannerWebRTC';
 import { useAuth } from '../contexts/AuthContext';
 import { getUserProfile, processQRScan, getBlocks, removeCollectedBlock } from '../firebase/firestore';
 import useToast from '../hooks/useToast';
@@ -434,7 +434,7 @@ function Profile() {
 
       {/* QR 스캐너 모달 */}
       {showScanner && (
-        <QRScanner
+        <QRScannerWebRTC
           onScan={handleQRScan}
           onClose={() => setShowScanner(false)}
         />
