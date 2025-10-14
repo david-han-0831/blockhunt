@@ -64,5 +64,8 @@ QR 코드 생성 및 스캔 기능 구현 - 학생들이 QR 코드를 스캔하�
 
 ## 🔗 관련 링크
 - DevLog: `docs/devlog/2025-10-10-02-qr-code-scan-feature.md`
+- DevLog: `docs/devlog/2025-10-10-01-studio-admin-firebase-integration.md`
 - 관련 문서: `docs/qr-blocks-schema.md`
+- Firestore Schema: `docs/firestore-schema.md`
+- Features Analysis: `docs/features-analysis.md`
 - Firebase 함수: `processQRScan`, `createQRCode`, `getQRCodes`
