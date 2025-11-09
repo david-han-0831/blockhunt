@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
+import AlertModal from './AlertModal';
 
 /**
  * QR 코드를 표시하는 모달 컴포넌트
@@ -12,6 +13,7 @@ import QRCode from 'qrcode';
 function QRViewModal({ show, onHide, qrData, blockInfo }) {
   const canvasRef = useRef(null);
   const [qrImageUrl, setQrImageUrl] = useState('');
+  const [alertModal, setAlertModal] = useState({ isOpen: false, type: 'success', title: '', message: '' });
 
   useEffect(() => {
     if (show && qrData && canvasRef.current) {
@@ -47,7 +49,7 @@ function QRViewModal({ show, onHide, qrData, blockInfo }) {
       });
       setQrImageUrl(imageUrl);
     } catch (error) {
-      console.error('QR 코드 생성 오류:', error);
+      console.error('QR code generation error:', error);
     }
   };
 
@@ -71,7 +73,12 @@ function QRViewModal({ show, onHide, qrData, blockInfo }) {
       timestamp: new Date().toISOString()
     };
     navigator.clipboard.writeText(JSON.stringify(qrPayload, null, 2));
-    alert('QR 데이터가 클립보드에 복사되었습니다!');
+    setAlertModal({
+      isOpen: true,
+      type: 'success',
+      title: 'Copied!',
+      message: 'QR data has been copied to clipboard.'
+    });
   };
 
   if (!show) return null;
@@ -93,7 +100,7 @@ function QRViewModal({ show, onHide, qrData, blockInfo }) {
             <div className="modal-header">
               <h5 className="modal-title">
                 <i className="bi bi-qr-code me-2"></i>
-                QR 코드 보기
+                View QR Code
               </h5>
               <button 
                 type="button" 
@@ -181,6 +188,14 @@ function QRViewModal({ show, onHide, qrData, blockInfo }) {
           </div>
         </div>
       </div>
+
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        onClose={() => setAlertModal({ ...alertModal, isOpen: false })}
+        type={alertModal.type}
+        title={alertModal.title}
+        message={alertModal.message}
+      />
     </>
   );
 }

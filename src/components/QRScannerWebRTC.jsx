@@ -192,7 +192,7 @@ function QRScannerWebRTC({ onScan, onClose }) {
 
     } catch (err) {
       console.error('❌ [QRScannerWebRTC] QR scanner failed:', err);
-      setError(`QR 스캐너 초기화 실패: ${err.message}`);
+      setError(`QR scanner initialization failed: ${err.message}`);
       setCameraPermission('denied');
       setIsScanning(false);
       setIsSwitchingCamera(false);
@@ -232,7 +232,7 @@ function QRScannerWebRTC({ onScan, onClose }) {
 
     } catch (err) {
       console.error('❌ [QRScannerWebRTC] QR scanner failed:', err);
-      setError(`QR 스캐너 초기화 실패: ${err.message}`);
+      setError(`QR scanner initialization failed: ${err.message}`);
       setCameraPermission('denied');
       setIsScanning(false);
       safeCleanup();
@@ -271,12 +271,71 @@ function QRScannerWebRTC({ onScan, onClose }) {
   };
 
   return (
-    <div className="modal-backdrop show" onClick={handleClose}>
-      <div className="modal show d-block" tabIndex="-1">
-        <div className={`modal-dialog modal-dialog-centered ${/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ? 'modal-fullscreen-sm-down' : 'modal-lg'}`} onClick={(e) => e.stopPropagation()}>
-          <div className="modal-content">
-            <div className="modal-header">
-              <h5 className="modal-title">
+    <div 
+      className="modal-backdrop show" 
+      onClick={handleClose} 
+      style={{ 
+        backgroundColor: 'rgba(15, 18, 36, 0.85)', 
+        backdropFilter: 'blur(8px)', 
+        position: 'fixed', 
+        top: 0, 
+        left: 0, 
+        right: 0, 
+        bottom: 0, 
+        zIndex: 1050,
+        opacity: 1
+      }}
+    >
+      <div 
+        className="modal show d-block" 
+        tabIndex="-1" 
+        style={{ 
+          position: 'fixed', 
+          top: 0, 
+          left: 0, 
+          right: 0, 
+          bottom: 0, 
+          zIndex: 1055,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          opacity: 1
+        }}
+      >
+        <div 
+          className={`modal-dialog modal-dialog-centered qr-scanner-modal-dialog ${/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ? 'modal-fullscreen-sm-down' : 'modal-lg'}`} 
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            margin: 'auto',
+            opacity: 1,
+            maxWidth: /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ? '100%' : '800px',
+            width: '100%',
+            padding: '1rem'
+          }}
+        >
+          <div 
+            className="modal-content qr-scanner-modal-content" 
+            style={{ 
+              backgroundColor: '#ffffff', 
+              opacity: 1, 
+              boxShadow: '0 20px 60px rgba(0,0,0,0.3)', 
+              backdropFilter: 'blur(10px)',
+              border: 'none',
+              borderRadius: '16px',
+              position: 'relative',
+              zIndex: 1
+            }}
+          >
+            <div 
+              className="modal-header qr-scanner-modal-header" 
+              style={{ 
+                backgroundColor: '#ffffff', 
+                borderBottom: '1px solid #dee2e6', 
+                opacity: 1,
+                borderRadius: '16px 16px 0 0'
+              }}
+            >
+              <h5 className="modal-title" style={{ opacity: 1, color: '#0f1224' }}>
                 <i className="bi bi-qr-code-scan me-2"></i>
                 Scan QR Code
               </h5>
@@ -285,14 +344,22 @@ function QRScannerWebRTC({ onScan, onClose }) {
                 className="btn-close" 
                 onClick={handleClose}
                 aria-label="Close"
+                style={{ opacity: 1 }}
               ></button>
             </div>
-            <div className="modal-body">
+            <div 
+              className="modal-body qr-scanner-modal-body" 
+              style={{ 
+                backgroundColor: '#ffffff', 
+                opacity: 1,
+                color: '#0f1224'
+              }}
+            >
               {/* HTTPS 경고 */}
               {window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && (
                 <div className="alert alert-warning mb-3">
                   <i className="bi bi-exclamation-triangle me-2"></i>
-                  <strong>주의:</strong> 카메라는 HTTPS 연결에서만 작동합니다.
+                  <strong>Note:</strong> Camera only works on HTTPS connections.
                 </div>
               )}
 
@@ -300,7 +367,7 @@ function QRScannerWebRTC({ onScan, onClose }) {
               {/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) && (
                 <div className="alert alert-info mb-3">
                   <i className="bi bi-phone me-2"></i>
-                  <strong>모바일 최적화:</strong> 모바일 환경에 맞게 최적화된 QR 스캐너입니다.
+                  <strong>Mobile Optimized:</strong> QR scanner optimized for mobile devices.
                 </div>
               )}
 
@@ -311,10 +378,10 @@ function QRScannerWebRTC({ onScan, onClose }) {
                     <div className="spinner-border spinner-border-sm me-2" role="status">
                       <span className="visually-hidden">Loading...</span>
                     </div>
-                    <div>카메라를 준비하는 중...</div>
+                    <div>Preparing camera...</div>
                   </div>
                   <small className="d-block mt-2">
-                    브라우저에서 카메라 권한 요청 알림이 표시되면 "허용"을 눌러주세요.
+                    Please click "Allow" when the browser requests camera permission.
                   </small>
                 </div>
               )}
@@ -328,12 +395,12 @@ function QRScannerWebRTC({ onScan, onClose }) {
                   
                   {cameraPermission === 'denied' && (
                     <div className="alert alert-info">
-                      <strong>카메라 권한 허용 방법:</strong>
+                      <strong>How to allow camera permission:</strong>
                       <ol className="mb-0 mt-2 small">
-                        <li>브라우저 주소창 왼쪽의 자물쇠 아이콘 클릭</li>
-                        <li>"카메라" 또는 "권한" 메뉴 선택</li>
-                        <li>카메라 권한을 "허용"으로 변경</li>
-                        <li>페이지 새로고침 후 다시 시도</li>
+                        <li>Click the lock icon on the left side of the browser address bar</li>
+                        <li>Select "Camera" or "Permissions" menu</li>
+                        <li>Change camera permission to "Allow"</li>
+                        <li>Refresh the page and try again</li>
                       </ol>
                     </div>
                   )}
@@ -344,14 +411,14 @@ function QRScannerWebRTC({ onScan, onClose }) {
                       onClick={handleRetry}
                     >
                       <i className="bi bi-arrow-clockwise me-1"></i>
-                      다시 시도
+                      Retry
                     </button>
                     <button 
                       className="btn btn-outline-secondary"
                       onClick={() => setShowManualInput(true)}
                     >
                       <i className="bi bi-keyboard me-1"></i>
-                      QR 데이터 직접 입력
+                      Enter QR Data Manually
                     </button>
                   </div>
                 </div>
@@ -360,7 +427,7 @@ function QRScannerWebRTC({ onScan, onClose }) {
                   <div className="mb-3">
                     <label className="form-label">
                       <i className="bi bi-keyboard me-2"></i>
-                      QR 데이터 직접 입력 (테스트용)
+                      Enter QR Data Manually (for testing)
                     </label>
                     <textarea 
                       className="form-control" 
@@ -380,14 +447,14 @@ function QRScannerWebRTC({ onScan, onClose }) {
                       }}
                     >
                       <i className="bi bi-check-circle me-1"></i>
-                      QR 데이터 처리
+                      Process QR Data
                     </button>
                     <button 
                       className="btn btn-outline-secondary"
                       onClick={() => setShowManualInput(false)}
                     >
                       <i className="bi bi-camera me-1"></i>
-                      카메라로 돌아가기
+                      Return to Camera
                     </button>
                   </div>
                 </div>
@@ -416,25 +483,25 @@ function QRScannerWebRTC({ onScan, onClose }) {
                         <div className="spinner-border text-primary mb-2" role="status">
                           <span className="visually-hidden">Loading...</span>
                         </div>
-                        <div>카메라를 시작하는 중...</div>
+                        <div>Starting camera...</div>
                       </div>
                     )}
                     
                     {!isScanning && cameraPermission === 'denied' && (
                       <div className="text-center text-muted">
                         <i className="bi bi-camera-off" style={{ fontSize: '3rem' }}></i>
-                        <div className="mt-2">카메라 권한이 거부되었습니다</div>
+                        <div className="mt-2">Camera permission denied</div>
                       </div>
                     )}
                   </div>
                   
                   <div className="alert alert-info">
                     <i className="bi bi-info-circle me-2"></i>
-                    <strong>사용 방법:</strong>
+                    <strong>How to use:</strong>
                     <ul className="mb-0 mt-2">
-                      <li>카메라에 QR 코드를 비춰주세요</li>
-                      <li>QR 코드가 자동으로 인식됩니다</li>
-                      <li>인식되면 블록을 획득할 수 있습니다</li>
+                      <li>Point the camera at the QR code</li>
+                      <li>QR code will be automatically recognized</li>
+                      <li>You can acquire blocks when recognized</li>
                     </ul>
                   </div>
                   
@@ -449,12 +516,12 @@ function QRScannerWebRTC({ onScan, onClose }) {
                         {isSwitchingCamera ? (
                           <>
                             <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
-                            전환 중...
+                            Switching...
                           </>
                         ) : (
                           <>
                             <i className="bi bi-camera-reels me-1"></i>
-                            카메라 전환
+                            Switch Camera
                           </>
                         )}
                       </button>
@@ -470,12 +537,12 @@ function QRScannerWebRTC({ onScan, onClose }) {
                         {isSwitchingCamera ? (
                           <>
                             <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
-                            전환 중...
+                            Switching...
                           </>
                         ) : (
                           <>
                             <i className="bi bi-camera-reels me-1"></i>
-                            카메라 전환
+                            Switch Camera
                           </>
                         )}
                       </button>
@@ -487,7 +554,7 @@ function QRScannerWebRTC({ onScan, onClose }) {
                       onClick={() => setShowManualInput(true)}
                     >
                       <i className="bi bi-keyboard me-1"></i>
-                      QR 데이터 직접 입력 (테스트용)
+                      Enter QR Data Manually (for testing)
                     </button>
                   </div>
                   
@@ -496,10 +563,10 @@ function QRScannerWebRTC({ onScan, onClose }) {
                     <div className="text-center mt-2">
                       <small className="text-muted">
                         <i className="bi bi-camera me-1"></i>
-                        현재 카메라: {
+                        Current camera: {
                           availableCameras.length > 1 
-                            ? (availableCameras[currentCameraIndex]?.label || '알 수 없음')
-                            : (currentCameraIndex === 0 ? '후면 카메라' : '전면 카메라')
+                            ? (availableCameras[currentCameraIndex]?.label || 'Unknown')
+                            : (currentCameraIndex === 0 ? 'Rear camera' : 'Front camera')
                         }
                         {availableCameras.length > 1 && (
                           <span className="ms-2">
@@ -512,11 +579,20 @@ function QRScannerWebRTC({ onScan, onClose }) {
                 </>
               )}
             </div>
-            <div className="modal-footer">
+            <div 
+              className="modal-footer qr-scanner-modal-footer" 
+              style={{ 
+                backgroundColor: '#ffffff', 
+                borderTop: '1px solid #dee2e6', 
+                opacity: 1,
+                borderRadius: '0 0 16px 16px'
+              }}
+            >
               <button 
                 type="button" 
                 className="btn btn-secondary" 
                 onClick={handleClose}
+                style={{ opacity: 1 }}
               >
                 <i className="bi bi-x-circle me-1"></i>
                 Close
@@ -534,19 +610,19 @@ function QRScannerWebRTC({ onScan, onClose }) {
               <div className="modal-header bg-success text-white">
                 <h5 className="modal-title">
                   <i className="bi bi-check-circle-fill me-2"></i>
-                  QR 코드 스캔 성공!
+                  QR Code Scan Successful!
                 </h5>
               </div>
               <div className="modal-body text-center">
                 <div className="mb-3">
                   <i className="bi bi-qr-code-scan text-success" style={{ fontSize: '3rem' }}></i>
                 </div>
-                <h6 className="mb-3">스캔된 데이터:</h6>
+                <h6 className="mb-3">Scanned data:</h6>
                 <div className="alert alert-light border">
                   <code className="text-break">{scannedData}</code>
                 </div>
                 <p className="text-muted small">
-                  블록을 획득했습니다! 🎉
+                  Block acquired! 🎉
                 </p>
               </div>
               <div className="modal-footer">
@@ -557,11 +633,11 @@ function QRScannerWebRTC({ onScan, onClose }) {
                     setShowSuccessModal(false);
                     setScannedData('');
                     safeCleanup();
-                    onClose(); // 스캐너 모달 닫기
+                    onClose(); // Close scanner modal
                   }}
                 >
                   <i className="bi bi-check-lg me-1"></i>
-                  확인
+                  Confirm
                 </button>
               </div>
             </div>

@@ -6,8 +6,8 @@ function ConfirmModal({
   onClose, 
   title, 
   message, 
-  confirmText = '확인',
-  cancelText = '취소',
+  confirmText = 'Confirm',
+  cancelText = 'Cancel',
   onConfirm,
   type = 'warning'
 }) {
@@ -64,26 +64,24 @@ function ConfirmModal({
           ></i>
         </div>
         
-        <h5 className="mb-3" style={{ color: 'var(--brand-ink)', fontWeight: '700' }}>
+        <h5 className="mb-3" style={{ color: 'var(--ink)', fontWeight: '700' }}>
           {title}
         </h5>
         
-        <p className="mb-4 text-muted" style={{ lineHeight: '1.5' }}>
+        <p className="mb-4" style={{ lineHeight: '1.5', color: 'var(--muted)' }}>
           {message}
         </p>
         
         <div className="d-flex gap-2 justify-content-center">
           <button 
-            className="btn btn-ghost px-4 py-2"
+            className="btn-ghost"
             onClick={onClose}
             style={{ minWidth: '100px' }}
           >
             {cancelText}
           </button>
           <button 
-            className={`btn px-4 py-2 ${
-              type === 'danger' ? 'btn-danger' : 'btn-brand'
-            }`}
+            className={type === 'danger' ? 'btn-solve btn-wide' : 'btn-solve btn-wide'}
             onClick={handleConfirm}
             style={{ minWidth: '100px' }}
           >

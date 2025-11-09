@@ -176,13 +176,21 @@ export const deleteQuestion = async (questionId) => {
 export const gradeSubmission = async (submissionId, gradeData) => {
   try {
     const docRef = doc(db, 'submissions', submissionId);
-    await updateDoc(docRef, {
-      status: 'graded',
+    const updateData = {
       grade: gradeData.grade,
       score: gradeData.score,
-      feedback: gradeData.feedback,
+      feedback: gradeData.feedback || '',
       gradedAt: new Date().toISOString()
-    });
+    };
+    
+    // status가 제공되면 업데이트, 없으면 기본값 'graded'
+    if (gradeData.status) {
+      updateData.status = gradeData.status;
+    } else {
+      updateData.status = 'graded';
+    }
+    
+    await updateDoc(docRef, updateData);
     return { success: true };
   } catch (error) {
     return { success: false, error: error.message };

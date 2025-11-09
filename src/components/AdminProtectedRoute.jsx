@@ -20,7 +20,7 @@ function AdminProtectedRoute({ children }) {
           <div className="spinner-border text-brand" role="status">
             <span className="visually-hidden">Loading...</span>
           </div>
-          <div className="mt-2 text-muted">Admin 권한을 확인하는 중...</div>
+          <div className="mt-2 text-muted">Checking admin permissions...</div>
         </div>
       </div>
     );
@@ -36,5 +36,11 @@ function AdminProtectedRoute({ children }) {
 }
 
 export default AdminProtectedRoute;
+
+
+
+
+
+
 
 

@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { registerUser } from '../firebase/auth';
 import { createUserProfile } from '../firebase/firestore';
 import { useAuth } from '../contexts/AuthContext';
-import Navbar from '../components/Navbar';
 import AppBar from '../components/AppBar';
+import TabBar from '../components/TabBar';
 import AlertModal from '../components/AlertModal';
 
 function Register() {
@@ -17,6 +17,34 @@ function Register() {
   const [confirm, setConfirm] = useState('');
   const [modal, setModal] = useState({ isOpen: false, type: 'info', title: '', message: '' });
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Field validation states
+  const [fieldErrors, setFieldErrors] = useState({
+    firstName: false,
+    lastName: false,
+    email: false,
+    username: false,
+    password: false,
+    confirm: false,
+    terms: false
+  });
+  const [passwordMatch, setPasswordMatch] = useState(true);
+
+  const firstNameRef = useRef(null);
+  const lastNameRef = useRef(null);
+  const emailRef = useRef(null);
+  const usernameRef = useRef(null);
+  const passwordRef = useRef(null);
+  const confirmRef = useRef(null);
+  const termsRef = useRef(null);
+
+  // body에 login-page 클래스 추가/제거
+  useEffect(() => {
+    document.body.classList.add('login-page');
+    return () => {
+      document.body.classList.remove('login-page');
+    };
+  }, []);
 
   // 이미 로그인된 사용자는 challenges 페이지로 리다이렉트 (모달 표시 중이 아닐 때만)
   useEffect(() => {
@@ -25,20 +53,58 @@ function Register() {
     }
   }, [currentUser, navigate, modal.isOpen]);
 
-  // Firebase 에러 메시지를 한국어로 번역
+  // 페이지 로드 시 모든 입력 필드 초기화 (브라우저 자동완성 방지)
+  useEffect(() => {
+    if (firstNameRef.current) firstNameRef.current.value = '';
+    if (lastNameRef.current) lastNameRef.current.value = '';
+    if (emailRef.current) emailRef.current.value = '';
+    if (usernameRef.current) usernameRef.current.value = '';
+    if (passwordRef.current) passwordRef.current.value = '';
+    if (confirmRef.current) confirmRef.current.value = '';
+    if (termsRef.current) termsRef.current.checked = false;
+  }, []);
+
+  // Password match validation
+  useEffect(() => {
+    if (confirm && password !== confirm) {
+      setPasswordMatch(false);
+      if (confirmRef.current) {
+        confirmRef.current.setCustomValidity('Passwords must match');
+      }
+    } else {
+      setPasswordMatch(true);
+      if (confirmRef.current) {
+        confirmRef.current.setCustomValidity('');
+      }
+    }
+  }, [password, confirm]);
+
+  // Firebase error message translation
   const getErrorMessage = (error) => {
     if (error.includes('auth/email-already-in-use')) {
-      return '이미 사용 중인 이메일입니다.';
+      return 'This email is already in use.';
     } else if (error.includes('auth/invalid-email')) {
-      return '올바른 이메일 형식이 아닙니다.';
+      return 'Please enter a valid email address.';
     } else if (error.includes('auth/weak-password')) {
-      return '비밀번호가 너무 약합니다. 6자 이상 입력해주세요.';
+      return 'Password is too weak. Please use at least 6 characters.';
     } else if (error.includes('auth/operation-not-allowed')) {
-      return '이메일/비밀번호 로그인이 비활성화되어 있습니다.';
+      return 'Email/password login is not enabled.';
     } else if (error.includes('auth/network-request-failed')) {
-      return '네트워크 연결을 확인해주세요.';
+      return 'Please check your network connection.';
     } else {
       return error;
+    }
+  };
+
+  const handleInputChange = (e) => {
+    const fieldName = e.target.id;
+    if (fieldErrors[fieldName]) {
+      setFieldErrors(prev => ({ ...prev, [fieldName]: false }));
+    }
+    if (e.target.id === 'password') {
+      setPassword(e.target.value);
+    } else if (e.target.id === 'confirm') {
+      setConfirm(e.target.value);
     }
   };
 
@@ -46,47 +112,83 @@ function Register() {
     e.preventDefault();
     const form = e.currentTarget;
     
-    if (form.checkValidity() === false || password !== confirm) {
-      e.stopPropagation();
-      setValidated(true);
+    // Validate all fields
+    const firstName = firstNameRef.current;
+    const lastName = lastNameRef.current;
+    const email = emailRef.current;
+    const username = usernameRef.current;
+    const password = passwordRef.current;
+    const confirm = confirmRef.current;
+    const terms = termsRef.current;
+
+    let isValid = true;
+    const newErrors = { ...fieldErrors };
+
+    if (!firstName?.validity.valid) {
+      newErrors.firstName = true;
+      isValid = false;
+    }
+    if (!lastName?.validity.valid) {
+      newErrors.lastName = true;
+      isValid = false;
+    }
+    if (!email?.validity.valid) {
+      newErrors.email = true;
+      isValid = false;
+    }
+    if (!username?.validity.valid) {
+      newErrors.username = true;
+      isValid = false;
+    }
+    if (!password?.validity.valid) {
+      newErrors.password = true;
+      isValid = false;
+    }
+    if (!confirm?.validity.valid || !passwordMatch) {
+      newErrors.confirm = true;
+      isValid = false;
+    }
+    if (!terms?.checked) {
+      newErrors.terms = true;
+      isValid = false;
+    }
+
+    setFieldErrors(newErrors);
+    setValidated(true);
+
+    if (!isValid) {
       return;
     }
     
-    setValidated(true);
-    
-    // Get form data
     const formData = new FormData(form);
-    const firstName = formData.get('firstName') || document.getElementById('firstName').value;
-    const lastName = formData.get('lastName') || document.getElementById('lastName').value;
-    const email = formData.get('email') || document.getElementById('email').value;
-    const username = formData.get('username') || document.getElementById('username').value;
+    const firstNameValue = formData.get('firstName') || firstName.value;
+    const lastNameValue = formData.get('lastName') || lastName.value;
+    const emailValue = formData.get('email') || email.value;
+    const usernameValue = formData.get('username') || username.value;
     
-    const displayName = `${firstName} ${lastName}`;
+    const displayName = `${firstNameValue} ${lastNameValue}`;
     
     setIsLoading(true);
     
     try {
-      // Register user with Firebase Auth
-      const result = await registerUser(email, password, displayName);
+      const result = await registerUser(emailValue, password.value, displayName);
       
       if (result.success) {
-        // Create user profile in Firestore
         await createUserProfile(result.user.uid, {
-          email: email,
+          email: emailValue,
           displayName: displayName,
-          firstName: firstName,
-          lastName: lastName,
-          username: username,
+          firstName: firstNameValue,
+          lastName: lastNameValue,
+          username: usernameValue,
           collectedBlocks: [],
           createdAt: new Date().toISOString()
         });
         
-        // Show success modal
         setModal({
           isOpen: true,
           type: 'success',
-          title: '회원가입 완료!',
-          message: '계정이 성공적으로 생성되었습니다. 로그인 페이지로 이동합니다.'
+          title: 'Account Created!',
+          message: 'Your account has been successfully created. Redirecting to login page...'
         });
         
         setTimeout(() => {
@@ -94,12 +196,11 @@ function Register() {
           navigate('/login');
         }, 2000);
       } else {
-        // Handle registration error
         const errorMessage = getErrorMessage(result.error);
         setModal({
           isOpen: true,
           type: 'error',
-          title: '회원가입 실패',
+          title: 'Registration Failed',
           message: errorMessage
         });
       }
@@ -108,8 +209,8 @@ function Register() {
       setModal({
         isOpen: true,
         type: 'error',
-        title: '오류 발생',
-        message: `회원가입 중 오류가 발생했습니다: ${getErrorMessage(error.message)}`
+        title: 'Error',
+        message: `An error occurred during registration: ${getErrorMessage(error.message)}`
       });
     } finally {
       setIsLoading(false);
@@ -118,123 +219,189 @@ function Register() {
 
   return (
     <>
-      <Navbar />
       <AppBar title="BlockHunt" />
       
-      <main className="container py-5">
-        <div className="row justify-content-center align-items-center" style={{ minHeight: '70vh' }}>
-          <div className="col-md-8 col-lg-6">
-            <div className="panel p-4 p-md-5">
-              <div className="mb-3 text-center">
-                <div className="d-inline-flex align-items-center justify-content-center rounded-4 border" style={{ width: '52px', height: '52px', borderColor: '#ffe0e7', background: '#fff5f7' }}>
-                  <i className="bi bi-person-plus-fill" style={{ fontSize: '1.25rem', color: 'var(--brand)' }}></i>
-                </div>
-                <h1 className="h4 mt-3 mb-1 brand-title">Create your account</h1>
-                <p className="mb-0 text-muted">Join BlockHunt to start building</p>
-              </div>
-
-              <form className={`needs-validation ${validated ? 'was-validated' : ''}`} noValidate onSubmit={handleSubmit}>
-                <div className="row g-3">
-              <div className="col-sm-6">
-                <label htmlFor="firstName" className="form-label">First name</label>
-                <input type="text" className="form-control" id="firstName" name="firstName" placeholder="Ada" required />
-                <div className="invalid-feedback">Enter your first name.</div>
-              </div>
-              <div className="col-sm-6">
-                <label htmlFor="lastName" className="form-label">Last name</label>
-                <input type="text" className="form-control" id="lastName" name="lastName" placeholder="Lovelace" required />
-                <div className="invalid-feedback">Enter your last name.</div>
-              </div>
-              <div className="col-12">
-                <label htmlFor="email" className="form-label">Email</label>
-                <input type="email" className="form-control" id="email" name="email" placeholder="you@example.com" required />
-                <div className="invalid-feedback">Provide a valid email.</div>
-              </div>
-              <div className="col-12">
-                <label htmlFor="username" className="form-label">Username</label>
-                <input type="text" className="form-control" id="username" name="username" placeholder="BlockHuntr" minLength="3" required />
-                <div className="invalid-feedback">Minimum 3 characters.</div>
-              </div>
-                  <div className="col-12">
-                    <label htmlFor="password" className="form-label">Password</label>
-                    <div className="input-group">
-                  <input 
-                    type={showPassword ? 'text' : 'password'} 
-                    className="form-control" 
-                    id="password" 
-                    name="password"
-                    placeholder="••••••••" 
-                    minLength="6" 
-                    required 
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                  />
-                      <button 
-                        className="btn btn-ghost" 
-                        type="button" 
-                        onClick={() => setShowPassword(!showPassword)}
-                        aria-label={showPassword ? 'Hide password' : 'Show password'}
-                      >
-                        <i className={`bi bi-eye${showPassword ? '-slash' : ''}`}></i>
-                      </button>
-                    </div>
-                    <div className="invalid-feedback">At least 6 characters.</div>
-                    <div className="form-text">Use 8+ characters with a mix of letters and numbers for better security.</div>
-                  </div>
-                  <div className="col-12">
-                    <label htmlFor="confirm" className="form-label">Confirm password</label>
-                    <div className="input-group">
-                  <input 
-                    type={showConfirm ? 'text' : 'password'} 
-                    className="form-control" 
-                    id="confirm" 
-                    name="confirm"
-                    placeholder="••••••••" 
-                    minLength="6" 
-                    required 
-                    value={confirm}
-                    onChange={(e) => setConfirm(e.target.value)}
-                  />
-                      <button 
-                        className="btn btn-ghost" 
-                        type="button" 
-                        onClick={() => setShowConfirm(!showConfirm)}
-                        aria-label={showConfirm ? 'Hide password' : 'Show password'}
-                      >
-                        <i className={`bi bi-eye${showConfirm ? '-slash' : ''}`}></i>
-                      </button>
-                    </div>
-                    <div className={`${password === confirm ? 'valid' : 'invalid'}-feedback`}>
-                      {password === confirm ? 'Looks good.' : 'Passwords must match.'}
-                    </div>
-                  </div>
-                </div>
-
-                <button 
-                  className="btn btn-brand w-100 mt-4 py-2" 
-                  type="submit"
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <>
-                      <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                      Creating account...
-                    </>
-                  ) : (
-                    <>
-                      <i className="bi bi-person-check-fill me-1"></i> Create account
-                    </>
-                  )}
-                </button>
-              </form>
-
-              <p className="text-center mt-4 mb-0">
-                Already have an account? <Link to="/login">Sign in</Link>
-              </p>
-            </div>
-          </div>
+      <main className="login-wrap">
+        <div className="login-hero" aria-hidden="true">
+          <div className="bubble b1"></div>
+          <div className="bubble b2"></div>
+          <div className="bubble b3"></div>
         </div>
+
+        <section className="login-card panel">
+          <div className="login-head">
+            <span className="kicker">Join us</span>
+            <h1 className="title">Create your BlockHunt account</h1>
+            <p className="subtitle">One account for Challenges and Studio.</p>
+          </div>
+
+          <form 
+            className="login-form" 
+            noValidate 
+            onSubmit={handleSubmit}
+          >
+            <div className="field">
+              <label htmlFor="firstName" className="label">First name</label>
+              <input 
+                type="text" 
+                id="firstName" 
+                name="firstName"
+                ref={firstNameRef}
+                className={`input ${fieldErrors.firstName ? 'is-invalid' : ''}`}
+                placeholder="Ada" 
+                required 
+                onChange={handleInputChange}
+              />
+              <div className="error">Enter your first name.</div>
+            </div>
+
+            <div className="field">
+              <label htmlFor="lastName" className="label">Last name</label>
+              <input 
+                type="text" 
+                id="lastName" 
+                name="lastName"
+                ref={lastNameRef}
+                className={`input ${fieldErrors.lastName ? 'is-invalid' : ''}`}
+                placeholder="Lovelace" 
+                required 
+                onChange={handleInputChange}
+              />
+              <div className="error">Enter your last name.</div>
+            </div>
+
+            <div className="field">
+              <label htmlFor="email" className="label">Email</label>
+              <input 
+                type="email" 
+                id="email" 
+                name="new-email"
+                ref={emailRef}
+                className={`input ${fieldErrors.email ? 'is-invalid' : ''}`}
+                placeholder="you@example.com" 
+                required 
+                onChange={handleInputChange}
+                autoComplete="email"
+                data-lpignore="true"
+              />
+              <div className="error">Provide a valid email.</div>
+            </div>
+
+            <div className="field">
+              <label htmlFor="username" className="label">Username</label>
+              <input 
+                type="text" 
+                id="username" 
+                name="new-username"
+                ref={usernameRef}
+                className={`input ${fieldErrors.username ? 'is-invalid' : ''}`}
+                placeholder="blockhuntr" 
+                minLength="3" 
+                required 
+                onChange={handleInputChange}
+                autoComplete="off"
+                data-lpignore="true"
+                data-form-type="other"
+              />
+              <div className="error">Minimum 3 characters.</div>
+            </div>
+
+            <div className="field">
+              <label htmlFor="password" className="label">Password</label>
+              <div className="pw-group">
+                <input 
+                  type={showPassword ? 'text' : 'password'} 
+                  id="password" 
+                  name="password"
+                  ref={passwordRef}
+                  className={`input ${fieldErrors.password ? 'is-invalid' : ''}`}
+                  placeholder="••••••••" 
+                  minLength="6" 
+                  required 
+                  onChange={handleInputChange}
+                  autoComplete="new-password"
+                />
+                <button 
+                  className="pw-toggle" 
+                  type="button" 
+                  onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  <i className={`bi bi-eye${showPassword ? '-slash' : ''}`}></i>
+                </button>
+              </div>
+              <div className="error">At least 6 characters.</div>
+            </div>
+
+            <div className="field">
+              <label htmlFor="confirm" className="label">Confirm password</label>
+              <div className="pw-group">
+                <input 
+                  type={showConfirm ? 'text' : 'password'} 
+                  id="confirm" 
+                  name="confirm"
+                  ref={confirmRef}
+                  className={`input ${fieldErrors.confirm || !passwordMatch ? 'is-invalid' : ''}`}
+                  placeholder="••••••••" 
+                  minLength="6" 
+                  required 
+                  onChange={handleInputChange}
+                  autoComplete="new-password"
+                />
+                <button 
+                  className="pw-toggle" 
+                  type="button" 
+                  onClick={() => setShowConfirm(!showConfirm)}
+                  aria-label={showConfirm ? 'Hide password' : 'Show password'}
+                >
+                  <i className={`bi bi-eye${showConfirm ? '-slash' : ''}`}></i>
+                </button>
+              </div>
+              <div className="error" style={{ color: passwordMatch && confirm ? '#15803d' : '#b91c1c' }}>
+                {passwordMatch && confirm ? 'Looks good.' : 'Passwords must match.'}
+              </div>
+            </div>
+
+            <div className="row-aux">
+              <label className="check">
+                <input 
+                  type="checkbox" 
+                  id="terms" 
+                  name="terms"
+                  ref={termsRef}
+                  required 
+                  onChange={handleInputChange}
+                />
+                <span>I agree to the <a className="link" href="#" onClick={(e) => e.preventDefault()}>Terms</a> and <a className="link" href="#" onClick={(e) => e.preventDefault()}>Privacy</a></span>
+              </label>
+            </div>
+
+            <button 
+              className="btn-solve btn-wide" 
+              type="submit"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <span className="spinner"></span>
+                  <span>Creating account…</span>
+                </>
+              ) : (
+                <>
+                  <i className="bi bi-person-check-fill"></i>
+                  <span>Create account</span>
+                </>
+              )}
+            </button>
+
+            <p className="signup">
+              Already have an account? <Link className="link-strong" to="/login">Sign in</Link>
+            </p>
+          </form>
+        </section>
       </main>
+
+      <TabBar />
 
       <AlertModal
         isOpen={modal.isOpen}
@@ -248,4 +415,3 @@ function Register() {
 }
 
 export default Register;
-

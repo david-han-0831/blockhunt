@@ -181,7 +181,7 @@ function QRScanner({ onScan, onClose }) {
       
     } catch (err) {
       console.error('❌ [QRScanner] Initialization failed:', err);
-      setError(`QR 스캐너 초기화 실패: ${err.message}`);
+      setError(`QR scanner initialization failed: ${err.message}`);
       setCameraPermission('denied');
       setIsScanning(false);
       
@@ -241,11 +241,11 @@ function QRScanner({ onScan, onClose }) {
   };
 
   return (
-    <div className="modal-backdrop show" onClick={handleClose}>
-      <div className="modal show d-block" tabIndex="-1">
+    <div className="modal-backdrop show" onClick={handleClose} style={{ backgroundColor: 'rgba(15, 18, 36, 0.95)', position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1050 }}>
+      <div className="modal show d-block" tabIndex="-1" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1055 }}>
         <div className={`modal-dialog modal-dialog-centered ${/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ? 'modal-fullscreen-sm-down' : 'modal-lg'}`} onClick={(e) => e.stopPropagation()}>
-          <div className="modal-content">
-            <div className="modal-header">
+          <div className="modal-content" style={{ backgroundColor: '#ffffff', opacity: 1, boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+            <div className="modal-header" style={{ backgroundColor: '#ffffff', borderBottom: '1px solid #dee2e6' }}>
               <h5 className="modal-title">
                 <i className="bi bi-qr-code-scan me-2"></i>
                 Scan QR Code
@@ -257,12 +257,12 @@ function QRScanner({ onScan, onClose }) {
                 aria-label="Close"
               ></button>
             </div>
-            <div className="modal-body">
+            <div className="modal-body" style={{ backgroundColor: '#ffffff' }}>
               {/* HTTPS 경고 */}
               {window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && (
                 <div className="alert alert-warning mb-3">
                   <i className="bi bi-exclamation-triangle me-2"></i>
-                  <strong>주의:</strong> 카메라는 HTTPS 연결에서만 작동합니다.
+                  <strong>Note:</strong> Camera only works on HTTPS connections.
                 </div>
               )}
 
@@ -270,7 +270,7 @@ function QRScanner({ onScan, onClose }) {
               {/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) && (
                 <div className="alert alert-info mb-3">
                   <i className="bi bi-phone me-2"></i>
-                  <strong>모바일 최적화:</strong> 모바일 환경에 맞게 최적화된 QR 스캐너입니다.
+                  <strong>Mobile Optimized:</strong> QR scanner optimized for mobile devices.
                 </div>
               )}
 
@@ -281,10 +281,10 @@ function QRScanner({ onScan, onClose }) {
                     <div className="spinner-border spinner-border-sm me-2" role="status">
                       <span className="visually-hidden">Loading...</span>
                     </div>
-                    <div>카메라를 준비하는 중...</div>
+                    <div>Preparing camera...</div>
                   </div>
                   <small className="d-block mt-2">
-                    브라우저에서 카메라 권한 요청 알림이 표시되면 "허용"을 눌러주세요.
+                    Please click "Allow" when the browser requests camera permission.
                   </small>
                 </div>
               )}
@@ -298,12 +298,12 @@ function QRScanner({ onScan, onClose }) {
                   
                   {cameraPermission === 'denied' && (
                     <div className="alert alert-info">
-                      <strong>카메라 권한 허용 방법:</strong>
+                      <strong>How to allow camera permission:</strong>
                       <ol className="mb-0 mt-2 small">
-                        <li>브라우저 주소창 왼쪽의 자물쇠 아이콘 클릭</li>
-                        <li>"카메라" 또는 "권한" 메뉴 선택</li>
-                        <li>카메라 권한을 "허용"으로 변경</li>
-                        <li>페이지 새로고침 후 다시 시도</li>
+                        <li>Click the lock icon on the left side of the browser address bar</li>
+                        <li>Select "Camera" or "Permissions" menu</li>
+                        <li>Change camera permission to "Allow"</li>
+                        <li>Refresh the page and try again</li>
                       </ol>
                     </div>
                   )}
@@ -314,14 +314,14 @@ function QRScanner({ onScan, onClose }) {
                       onClick={handleRetry}
                     >
                       <i className="bi bi-arrow-clockwise me-1"></i>
-                      다시 시도
+                      Retry
                     </button>
                     <button 
                       className="btn btn-outline-secondary"
                       onClick={() => setShowManualInput(true)}
                     >
                       <i className="bi bi-keyboard me-1"></i>
-                      QR 데이터 직접 입력
+                      Enter QR Data Manually
                     </button>
                   </div>
                 </div>
@@ -330,7 +330,7 @@ function QRScanner({ onScan, onClose }) {
                   <div className="mb-3">
                     <label className="form-label">
                       <i className="bi bi-keyboard me-2"></i>
-                      QR 데이터 직접 입력 (테스트용)
+                      Enter QR Data Manually (for testing)
                     </label>
                     <textarea 
                       className="form-control" 
@@ -350,14 +350,14 @@ function QRScanner({ onScan, onClose }) {
                       }}
                     >
                       <i className="bi bi-check-circle me-1"></i>
-                      QR 데이터 처리
+                      Process QR Data
                     </button>
                     <button 
                       className="btn btn-outline-secondary"
                       onClick={() => setShowManualInput(false)}
                     >
                       <i className="bi bi-camera me-1"></i>
-                      카메라로 돌아가기
+                      Return to Camera
                     </button>
                   </div>
                 </div>
@@ -387,25 +387,25 @@ function QRScanner({ onScan, onClose }) {
                         <div className="spinner-border text-primary mb-2" role="status">
                           <span className="visually-hidden">Loading...</span>
                         </div>
-                        <div>카메라를 시작하는 중...</div>
+                        <div>Starting camera...</div>
                       </div>
                     )}
                     
                     {!isScanning && cameraPermission === 'denied' && (
                       <div className="text-center text-muted">
                         <i className="bi bi-camera-off" style={{ fontSize: '3rem' }}></i>
-                        <div className="mt-2">카메라 권한이 거부되었습니다</div>
+                        <div className="mt-2">Camera permission denied</div>
                       </div>
                     )}
                   </div>
                   
                   <div className="alert alert-info">
                     <i className="bi bi-info-circle me-2"></i>
-                    <strong>사용 방법:</strong>
+                    <strong>How to use:</strong>
                     <ul className="mb-0 mt-2">
-                      <li>카메라에 QR 코드를 비춰주세요</li>
-                      <li>QR 코드가 자동으로 인식됩니다</li>
-                      <li>인식되면 블록을 획득할 수 있습니다</li>
+                      <li>Point the camera at the QR code</li>
+                      <li>QR code will be automatically recognized</li>
+                      <li>You can acquire blocks when recognized</li>
                     </ul>
                   </div>
                   
@@ -415,13 +415,13 @@ function QRScanner({ onScan, onClose }) {
                       onClick={() => setShowManualInput(true)}
                     >
                       <i className="bi bi-keyboard me-1"></i>
-                      QR 데이터 직접 입력 (테스트용)
+                      Enter QR Data Manually (for testing)
                     </button>
                   </div>
                 </>
               )}
             </div>
-            <div className="modal-footer">
+            <div className="modal-footer" style={{ backgroundColor: '#ffffff', borderTop: '1px solid #dee2e6' }}>
               <button 
                 type="button" 
                 className="btn btn-secondary" 

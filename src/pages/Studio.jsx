@@ -1,92 +1,115 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import Navbar from '../components/Navbar';
 import AppBar from '../components/AppBar';
 import TabBar from '../components/TabBar';
 import { useAuth } from '../contexts/AuthContext';
-import { saveSubmission } from '../firebase/firestore';
+import { saveSubmission, getBlocks, getUserProfile } from '../firebase/firestore';
 
 const LS_KEY = 'BlockHunt_workspace_v2';
 
-// Toolbox XML for Blockly
-const buildToolbox = () => {
-  return `
+// Toolbox XML builder - dynamically builds based on collected blocks and default blocks
+const buildToolbox = (collectedBlocks = [], allBlocks = []) => {
+  // Create a map of collected block IDs for quick lookup
+  const collectedSet = new Set(collectedBlocks);
+  
+  // Filter blocks:
+  // - Default blocks (isDefaultBlock === true): Always available
+  // - QR Required blocks (isDefaultBlock === false): Only if collected
+  const availableBlocks = allBlocks.filter(block => {
+    if (block.isDefaultBlock === true) {
+      // Default blocks are always available
+      return true;
+    } else {
+      // QR Required blocks are only available if collected
+      return collectedSet.has(block.id);
+    }
+  });
+  
+  // If no blocks available, return empty toolbox with only Variables and Functions
+  if (availableBlocks.length === 0) {
+    return `
 <xml id="toolbox" style="display:none">
-  <category name="Logic" colour="#5CA65C">
-    <block type="controls_if"></block>
-    <block type="logic_compare"></block>
-    <block type="logic_operation"></block>
-    <block type="logic_negate"></block>
-    <block type="logic_boolean"></block>
-    <block type="logic_null"></block>
-    <block type="logic_ternary"></block>
-  </category>
-
-  <category name="Loops" colour="#5CA65C">
-    <block type="controls_repeat_ext">
-      <value name="TIMES"><shadow type="math_number"><field name="NUM">10</field></shadow></value>
-    </block>
-    <block type="controls_whileUntil"></block>
-    <block type="controls_for">
-      <value name="FROM"><shadow type="math_number"><field name="NUM">1</field></shadow></value>
-      <value name="TO"><shadow type="math_number"><field name="NUM">10</field></shadow></value>
-      <value name="BY"><shadow type="math_number"><field name="NUM">1</field></shadow></value>
-    </block>
-    <block type="controls_forEach"></block>
-    <block type="controls_flow_statements"></block>
-  </category>
-
-  <category name="Math" colour="#5C68A6">
-    <block type="math_number"><field name="NUM">0</field></block>
-    <block type="math_arithmetic"></block>
-    <block type="math_single"></block>
-    <block type="math_trig"></block>
-    <block type="math_constant"></block>
-    <block type="math_number_property"></block>
-    <block type="math_change">
-      <value name="DELTA"><shadow type="math_number"><field name="NUM">1</field></shadow></value>
-    </block>
-    <block type="math_round"></block>
-    <block type="math_modulo"></block>
-    <block type="math_random_int">
-      <value name="FROM"><shadow type="math_number"><field name="NUM">1</field></shadow></value>
-      <value name="TO"><shadow type="math_number"><field name="NUM">10</field></shadow></value>
-    </block>
-    <block type="math_random_float"></block>
-  </category>
-
-  <category name="Text" colour="#5CA699">
-    <block type="text"></block>
-    <block type="text_join"></block>
-    <block type="text_length"></block>
-    <block type="text_isEmpty"></block>
-    <block type="text_indexOf"></block>
-    <block type="text_charAt"></block>
-    <block type="text_getSubstring"></block>
-    <block type="text_changeCase"></block>
-    <block type="text_trim"></block>
-    <block type="text_print"></block>
-  </category>
-
-  <category name="Lists" colour="#745CA6">
-    <block type="lists_create_with"></block>
-    <block type="lists_create_with"><mutation items="0"></mutation></block>
-    <block type="lists_repeat">
-      <value name="NUM"><shadow type="math_number"><field name="NUM">5</field></shadow></value>
-    </block>
-    <block type="lists_length"></block>
-    <block type="lists_isEmpty"></block>
-    <block type="lists_indexOf"></block>
-    <block type="lists_getIndex"></block>
-    <block type="lists_setIndex"></block>
-    <block type="lists_getSublist"></block>
-    <block type="lists_split"></block>
-    <block type="lists_sort"></block>
-  </category>
-
   <category name="Variables" custom="VARIABLE" colour="#A65C81"></category>
   <category name="Functions" custom="PROCEDURE" colour="#5CA65C"></category>
 </xml>`;
+  }
+  
+  // Group blocks by category
+  const blocksByCategory = {};
+  availableBlocks.forEach(block => {
+    const category = block.category || 'Other';
+    if (!blocksByCategory[category]) {
+      blocksByCategory[category] = [];
+    }
+    blocksByCategory[category].push(block);
+  });
+
+  // Category color mapping
+  const categoryColors = {
+    'Logic': '#5CA65C',
+    'Loops': '#F59E0B',
+    'Math': '#5C68A6',
+    'Text': '#8B5CF6',
+    'Lists': '#06B6D4',
+    'Variables': '#22C55E',
+    'Functions': '#10B981',
+    'Other': '#9CA3AF'
+  };
+
+  // Build category XML
+  let categoriesXML = '';
+  Object.keys(blocksByCategory).sort().forEach(category => {
+    const blocks = blocksByCategory[category];
+    const color = categoryColors[category] || categoryColors['Other'];
+    
+    categoriesXML += `  <category name="${category}" colour="${color}">\n`;
+    
+    blocks.forEach(block => {
+      const blockType = block.blockType || block.id;
+      // Add block with appropriate shadow values if needed
+      if (blockType === 'controls_repeat_ext') {
+        categoriesXML += `    <block type="${blockType}">\n`;
+        categoriesXML += `      <value name="TIMES"><shadow type="math_number"><field name="NUM">10</field></shadow></value>\n`;
+        categoriesXML += `    </block>\n`;
+      } else if (blockType === 'controls_for') {
+        categoriesXML += `    <block type="${blockType}">\n`;
+        categoriesXML += `      <value name="FROM"><shadow type="math_number"><field name="NUM">1</field></shadow></value>\n`;
+        categoriesXML += `      <value name="TO"><shadow type="math_number"><field name="NUM">10</field></shadow></value>\n`;
+        categoriesXML += `      <value name="BY"><shadow type="math_number"><field name="NUM">1</field></shadow></value>\n`;
+        categoriesXML += `    </block>\n`;
+      } else if (blockType === 'math_random_int') {
+        categoriesXML += `    <block type="${blockType}">\n`;
+        categoriesXML += `      <value name="FROM"><shadow type="math_number"><field name="NUM">1</field></shadow></value>\n`;
+        categoriesXML += `      <value name="TO"><shadow type="math_number"><field name="NUM">10</field></shadow></value>\n`;
+        categoriesXML += `    </block>\n`;
+      } else if (blockType === 'math_number') {
+        categoriesXML += `    <block type="${blockType}"><field name="NUM">0</field></block>\n`;
+      } else if (blockType === 'math_change') {
+        categoriesXML += `    <block type="${blockType}">\n`;
+        categoriesXML += `      <value name="DELTA"><shadow type="math_number"><field name="NUM">1</field></shadow></value>\n`;
+        categoriesXML += `    </block>\n`;
+      } else if (blockType === 'lists_repeat') {
+        categoriesXML += `    <block type="${blockType}">\n`;
+        categoriesXML += `      <value name="NUM"><shadow type="math_number"><field name="NUM">5</field></shadow></value>\n`;
+        categoriesXML += `    </block>\n`;
+      } else if (blockType === 'lists_create_with') {
+        categoriesXML += `    <block type="${blockType}"></block>\n`;
+        categoriesXML += `    <block type="${blockType}"><mutation items="0"></mutation></block>\n`;
+      } else {
+        categoriesXML += `    <block type="${blockType}"></block>\n`;
+      }
+    });
+    
+    categoriesXML += `  </category>\n`;
+  });
+
+  // Always include Variables and Functions
+  categoriesXML += `  <category name="Variables" custom="VARIABLE" colour="#22C55E"></category>\n`;
+  categoriesXML += `  <category name="Functions" custom="PROCEDURE" colour="#10B981"></category>\n`;
+
+  return `
+<xml id="toolbox" style="display:none">
+${categoriesXML}</xml>`;
 };
 
 // Initial seed workspace
@@ -127,9 +150,57 @@ function Studio() {
     'Write a program that reads an integer <em>n</em> and prints the sum of all integers from 1 to <em>n</em>. If <em>n</em> is negative, print <code>0</code>. For example, input <code>5</code> should output <code>15</code>. You may assume input is a single line with a valid integer.'
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [collectedBlocks, setCollectedBlocks] = useState([]);
+  const [allBlocks, setAllBlocks] = useState([]);
+  const [blocksLoaded, setBlocksLoaded] = useState(false);
+
+  // Load blocks from API
+  useEffect(() => {
+    const loadBlocksData = async () => {
+      if (!currentUser) {
+        console.log('⚠️ No current user, skipping block load');
+        setBlocksLoaded(true);
+        return;
+      }
+
+      try {
+        console.log('🔄 Loading blocks for Studio...');
+        
+        // Load all blocks catalog
+        const blocksResult = await getBlocks();
+        if (blocksResult.success) {
+          console.log('📦 Blocks loaded:', blocksResult.data.length);
+          setAllBlocks(blocksResult.data);
+        } else {
+          console.warn('⚠️ Failed to load blocks:', blocksResult.error);
+        }
+
+        // Load user's collected blocks
+        const userResult = await getUserProfile(currentUser.uid);
+        if (userResult.success) {
+          const collected = userResult.data.collectedBlocks || [];
+          console.log('📦 Collected blocks:', collected.length);
+          setCollectedBlocks(collected);
+        } else {
+          console.warn('⚠️ Failed to load user profile:', userResult.error);
+        }
+      } catch (err) {
+        console.error('❌ Error loading blocks:', err);
+      } finally {
+        setBlocksLoaded(true);
+      }
+    };
+
+    loadBlocksData();
+  }, [currentUser]);
 
   // Initialize Blockly
   useEffect(() => {
+    // Wait for blocks to be loaded
+    if (!blocksLoaded) {
+      return;
+    }
+
     // Load saved question
     const saved = localStorage.getItem('BlockHunt_current_question');
     if (saved) {
@@ -164,9 +235,10 @@ function Studio() {
 
     window.addEventListener('resize', onResize);
 
-    // Parse toolbox
+    // Parse toolbox with collected blocks
     const parser = new DOMParser();
-    const toolboxDom = parser.parseFromString(buildToolbox(), 'text/xml').documentElement;
+    const toolboxXML = buildToolbox(collectedBlocks, allBlocks);
+    const toolboxDom = parser.parseFromString(toolboxXML, 'text/xml').documentElement;
 
     // Initialize workspace
     workspaceRef.current = window.Blockly.inject(div, {
@@ -209,7 +281,7 @@ function Studio() {
         workspaceRef.current.dispose();
       }
     };
-  }, []);
+  }, [blocksLoaded, collectedBlocks, allBlocks]);
 
   // Get Python code from Blockly workspace
   const getPython = () => {
@@ -302,18 +374,18 @@ function Studio() {
 
   const handleSubmit = async () => {
     if (!currentUser) {
-      showToast('로그인이 필요합니다.');
+      showToast('Login required.');
       return;
     }
 
     if (!workspaceRef.current) {
-      showToast('워크스페이스가 초기화되지 않았습니다.');
+      showToast('Workspace is not initialized.');
       return;
     }
 
     const code = getPython();
     if (!code || code.trim() === '') {
-      showToast('제출할 코드가 없습니다.');
+      showToast('No code to submit.');
       return;
     }
 
@@ -340,94 +412,97 @@ function Studio() {
       });
 
       if (result.success) {
-        showToast('✅ 제출 완료!');
+        showToast('✅ Submission completed!');
         console.log('[Submit] Submission ID:', result.id);
       } else {
-        showToast('❌ 제출 실패: ' + (result.error || '알 수 없는 오류'));
+        showToast('❌ Submission failed: ' + (result.error || 'Unknown error'));
         console.error('[Submit] Error:', result.error);
       }
     } catch (error) {
-      showToast('❌ 제출 중 오류 발생');
+      showToast('❌ Error occurred during submission');
       console.error('[Submit] Exception:', error);
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  // body에 studio 클래스 추가/제거
+  useEffect(() => {
+    document.body.classList.add('studio');
+    return () => {
+      document.body.classList.remove('studio');
+    };
+  }, []);
+
   return (
     <>
-      <Navbar />
       <AppBar title="BlockHunt" />
       
-      <main className="container py-4">
-        <div className="actionbar">
-          <div className="container py-2 d-flex flex-wrap gap-2 justify-content-end">
-            <button className="btn btn-ghost" onClick={handleSave}>
-              <i className="bi bi-save me-1"></i>Save
-            </button>
-            <button 
-              className="btn btn-ghost" 
-              onClick={handleSubmit}
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <>
-                  <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
-                  Submitting...
-                </>
-              ) : (
-                <>
-                  <i className="bi bi-upload me-1"></i>Submit
-                </>
-              )}
-            </button>
-            <button className="btn btn-ghost" onClick={handleDownload}>
-              <i className="bi bi-download me-1"></i>Download .py
-            </button>
-            <button className="btn btn-brand" onClick={handleRun}>
-              <i className="bi bi-play-fill me-1"></i>Run
-            </button>
-          </div>
-        </div>
-
-        <div className="panel p-3 mb-3">
-          <div className="small text-uppercase text-muted fw-bold">Programming Question</div>
-          <div dangerouslySetInnerHTML={{ __html: questionText }} className="fw-semibold" />
-        </div>
-
-        <div className="row g-4">
-          <div className="col-lg-7">
-            <div className="panel p-3">
-              <h6 className="panel-title mb-2">Workspace</h6>
-              <div id="blocklyArea" ref={blocklyAreaRef}>
-                <div id="blocklyDiv" ref={blocklyDivRef}></div>
-              </div>
+      <main className="wrap" aria-live="polite">
+        <section className="panel panel--q" aria-label="Programming question">
+          <div className="q-header">
+            <div className="q-left">
+              <div className="kicker">Programming Question</div>
+              <p className="question-text" dangerouslySetInnerHTML={{ __html: questionText }} />
+            </div>
+            <div className="q-actions">
+              <button className="btn-ghost" onClick={handleSave}>
+                <i className="bi bi-save"></i> Save
+              </button>
+              <button 
+                className="btn-ghost" 
+                onClick={handleSubmit}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <span className="spinner"></span> Submitting...
+                  </>
+                ) : (
+                  <>
+                    <i className="bi bi-upload"></i> Submit
+                  </>
+                )}
+              </button>
+              <button className="btn-ghost" onClick={handleDownload}>
+                <i className="bi bi-download"></i> Download .py
+              </button>
+              <button className="btn-solve" onClick={handleRun}>
+                <i className="bi bi-play-fill"></i> Run
+              </button>
             </div>
           </div>
+        </section>
 
-          <div className="col-lg-5">
-            <div className="panel p-3 mb-3">
-              <h6 className="mb-2">Console Output</h6>
-              <pre className="console-box mb-0">{consoleOutput}</pre>
+        <div className="studio-grid">
+          <section className="panel" aria-label="Workspace" style={{ padding: '16px' }}>
+            <h6 className="title" style={{ fontSize: '1rem', margin: '0 0 10px' }}>Workspace</h6>
+            <div id="blocklyArea" ref={blocklyAreaRef}>
+              <div id="blocklyDiv" ref={blocklyDivRef}></div>
             </div>
+          </section>
 
-            <div className="panel p-3">
-              <h6 className="mb-2">Generated Python</h6>
-              <pre className="code-box mb-0" style={{ whiteSpace: 'pre-wrap' }}>
-                {pyCode || '# Python code will appear here'}
-              </pre>
-            </div>
-          </div>
+          <section className="panel panel--right" aria-label="Outputs" style={{ padding: '16px' }}>
+            <h6 className="title" style={{ fontSize: '1rem', margin: '0 0 10px' }}>Console Output</h6>
+            <pre id="console" className="console" role="log" aria-live="polite">
+              {consoleOutput}
+            </pre>
+
+            <h6 className="title" style={{ fontSize: '1rem', margin: '20px 0 10px' }}>Generated Python</h6>
+            <pre id="pyCode" className="code">
+              {pyCode || '(empty)'}
+            </pre>
+          </section>
         </div>
       </main>
 
-      <button className="fab d-inline-flex align-items-center" onClick={handleRun}>
+      <button className="fab" onClick={handleRun} aria-label="Run">
         <i className="bi bi-play-fill"></i>
         <span className="fab-label">Run</span>
       </button>
 
-      <Link to="/admin">
-        <button className="fab fab--secondary fab-admin fab--sm" aria-label="Open Admin">
+      <Link to="/admin" className="d-inline-flex">
+        <button className="fab fab-secondary fab--sm" aria-label="Open Admin">
           <i className="bi bi-shield-lock"></i>
           <span className="fab-label">Admin</span>
         </button>

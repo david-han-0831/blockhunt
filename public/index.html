@@ -4,12 +4,17 @@
     <meta charset="utf-8" />
     <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#e11d48" />
+    <meta name="theme-color" content="#7c3aed" />
     <meta
       name="description"
       content="BlockHunt - Learn coding with block-based programming"
     />
     <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Nunito:wght@600;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Rubik+Rounded:wght@600;800&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <!--
       manifest.json provides metadata used when your web app is installed on a
       user's mobile device or desktop. See https://developers.google.com/web/fundamentals/web-app-manifest/
@@ -26,10 +31,10 @@
     -->
     <title>BlockHunt • Code Studio</title>
     
-    <!-- Blockly (ORDER MATTERS) -->
-    <script src="https://unpkg.com/blockly/blockly.min.js"></script>
-    <script src="https://unpkg.com/blockly/blocks.min.js"></script>
-    <script src="https://unpkg.com/blockly/python_compressed.js"></script>
+    <!-- Blockly (ORDER MATTERS) - Version 11.0.0 to avoid deprecation warnings -->
+    <script src="https://unpkg.com/blockly@11.0.0/blockly.min.js"></script>
+    <script src="https://unpkg.com/blockly@11.0.0/blocks.min.js"></script>
+    <script src="https://unpkg.com/blockly@11.0.0/python_compressed.js"></script>
     
     <!-- Pyodide -->
     <script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js"></script>

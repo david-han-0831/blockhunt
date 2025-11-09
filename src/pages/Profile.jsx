@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import Navbar from '../components/Navbar';
 import AppBar from '../components/AppBar';
 import TabBar from '../components/TabBar';
 import QRScannerWebRTC from '../components/QRScannerWebRTC';
@@ -128,7 +127,7 @@ function Profile() {
   // QR 스캔 처리
   const handleQRScan = async (qrData) => {
     if (!currentUser) {
-      error('로그인이 필요합니다.');
+      error('Login required.');
       setShowScanner(false);
       return;
     }
@@ -141,7 +140,7 @@ function Profile() {
       
       if (result.success) {
         if (result.alreadyCollected) {
-          success('이미 보유하고 있는 블록입니다! 🎯');
+          success('You already have this block! 🎯');
         } else {
           // 새로운 블록 획득
           const blockNames = result.blocksObtained?.map(blockId => {
@@ -149,7 +148,7 @@ function Profile() {
             return block ? block.name : blockId;
           }).join(', ') || '';
           
-          success(`새로운 블록을 획득했습니다! 🎉\n${blockNames}\n총 ${result.totalBlocks}개의 블록 보유`);
+          success(`New block acquired! 🎉\n${blockNames}\nTotal ${result.totalBlocks} blocks owned`);
           
           // 로컬 상태 업데이트
           setCollected(prev => {
@@ -163,11 +162,11 @@ function Profile() {
         }
         // setShowScanner(false); // QR 스캐너 내부에서 처리하도록 제거
       } else {
-        error('QR 코드 처리 실패: ' + result.error);
+        error('QR code processing failed: ' + result.error);
       }
     } catch (err) {
       console.error('QR scan error:', err);
-      error('QR 스캔 중 오류가 발생했습니다.');
+      error('An error occurred while scanning QR code.');
     } finally {
       setLoading(false);
     }
@@ -175,7 +174,7 @@ function Profile() {
 
   const handleToggleBlock = async (blockId) => {
     if (!currentUser) {
-      error('로그인이 필요합니다.');
+      error('Login required.');
       return;
     }
 
@@ -187,20 +186,26 @@ function Profile() {
         console.log('🗑️ Removing block:', blockId);
         const result = await removeCollectedBlock(currentUser.uid, blockId);
         
+        // 로컬 상태 업데이트 (Firebase 성공 여부와 관계없이)
+        const newCollected = new Set(collected);
+        newCollected.delete(blockId);
+        setCollected(newCollected);
+        
+        // localStorage에도 저장
+        localStorage.setItem('BlockHunt_collected_set', JSON.stringify([...newCollected]));
+        
         if (result.success) {
-          // 로컬 상태 업데이트
-          const newCollected = new Set(collected);
-          newCollected.delete(blockId);
-          setCollected(newCollected);
-          
-          // localStorage에도 저장
-          localStorage.setItem('BlockHunt_collected_set', JSON.stringify([...newCollected]));
-          
-          success('블록이 제거되었습니다.');
+          // Firebase에서도 제거 성공
+          success('Block removed.');
           console.log('✅ Block removed successfully:', blockId);
+        } else if (result.error === 'Block not found in collected blocks') {
+          // Firebase에 없으면 로컬에서만 제거 (테스트용)
+          success('Block removed from local storage.');
+          console.log('✅ Block removed from local storage:', blockId);
         } else {
-          error(result.error || '블록 제거에 실패했습니다.');
-          console.error('❌ Failed to remove block:', result.error);
+          // 다른 에러 발생 시에도 로컬에서는 제거됨
+          success('Block removed from local storage.');
+          console.warn('⚠️ Firebase removal failed, but removed locally:', result.error);
         }
       } else {
         // 블록 추가 (기존 로직 유지)
@@ -211,12 +216,12 @@ function Profile() {
         // localStorage에도 저장 (오프라인 지원)
         localStorage.setItem('BlockHunt_collected_set', JSON.stringify([...newCollected]));
         
-        success('블록이 추가되었습니다.');
+        success('Block added.');
         console.log('✅ Block added locally:', blockId);
       }
     } catch (err) {
       console.error('❌ Error toggling block:', err);
-      error('블록 상태 변경 중 오류가 발생했습니다.');
+      error('An error occurred while changing block status.');
     }
   };
 
@@ -237,200 +242,190 @@ function Profile() {
 
   return (
     <>
-      <Navbar />
       <AppBar title="BlockHunt" />
       
-      <main className="container py-4">
-        <div className="panel p-3 p-md-4 mb-3">
-          <div className="d-flex align-items-center gap-3">
-            <div className="avatar">
-              {user.name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()}
-            </div>
-            <div className="flex-grow-1">
-              <div className="d-flex align-items-center gap-2 flex-wrap">
-                <h1 className="h5 mb-0">{user.name}</h1>
+      <main className="profile">
+        <section className="hero" aria-label="Profile header">
+          <div className="hero-wrap">
+            <div className="hero-bg"></div>
+            <div className="hero-row">
+              <div className="avatar-xl" aria-hidden="true">
+                {user.name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()}
               </div>
-              <div className="muted small">{user.email}</div>
-            </div>
-            <div className="d-none d-md-flex gap-2">
-              <Link className="btn btn-ghost" to="/challenges">
-                <i className="bi bi-list-task me-1"></i>Challenges
-              </Link>
-              <Link className="btn btn-brand" to="/studio">
-                <i className="bi bi-code-slash me-1"></i>Open Studio
-              </Link>
-            </div>
-          </div>
-        </div>
-
-        <div className="row g-3 equal-row mb-3">
-          <div className="col-md-4">
-            <div className="panel p-3 h-100">
-              <div className="muted small">Total Blocks</div>
-              <div className="display-6 fw-bold">{totalBlocks}</div>
-              <div className="small">All available in curriculum</div>
-            </div>
-          </div>
-          <div className="col-md-4">
-            <div className="panel p-3 h-100">
-              <div className="muted small">Collected (AR)</div>
-              <div className="display-6 fw-bold">{collectedCount}</div>
-              <div className="progress mt-2">
-                <div className="progress-bar" style={{ width: `${collectedPercent}%` }}></div>
+              <div className="identity">
+                <div className="kicker">Your space</div>
+                <div className="name">{user.name}</div>
+                <div className="role">
+                  <i className="bi bi-magic"></i> Learner
+                </div>
               </div>
-              <div className="small mt-1">{collectedPercent}% complete</div>
+              <Link className="hero-cta" to="/studio">
+                <i className="bi bi-play-fill"></i>
+                <span>Open Studio</span>
+              </Link>
             </div>
           </div>
-          <div className="col-md-4">
-            <div className="panel p-3 h-100">
-              <div className="muted small">Missing</div>
-              <div className="display-6 fw-bold">{missingCount}</div>
-              <div className="small">Keep scanning QR codes to unlock more!</div>
-            </div>
-          </div>
-        </div>
+        </section>
 
-        <div className="panel p-3 mb-3">
-          <div className="toolbar d-flex flex-wrap align-items-center gap-2">
-            <div className="btn-group" role="group">
+        <section className="stats" aria-label="Profile statistics">
+          <div className="stat">
+            <div className="k">
+              <i className="bi bi-boxes"></i>Total Blocks
+            </div>
+            <div className="v">{totalBlocks}</div>
+            <div className="muted">In curriculum</div>
+          </div>
+          <div className="stat">
+            <div className="k">
+              <i className="bi bi-check2-circle"></i>Collected
+            </div>
+            <div className="v">{collectedCount}</div>
+            <div className="progress">
+              <div className="progress-bar" style={{ width: `${collectedPercent}%` }}></div>
+            </div>
+            <div className="muted">{collectedPercent}% complete</div>
+          </div>
+          <div className="stat">
+            <div className="k">
+              <i className="bi bi-list-task"></i>Solved
+            </div>
+            <div className="v">0</div>
+            <div className="progress">
+              <div className="progress-bar" style={{ width: '0%' }}></div>
+            </div>
+            <div className="muted">0 of 0 challenges</div>
+          </div>
+          <div className="stat">
+            <div className="k">
+              <i className="bi bi-graph-up"></i>Success Rate
+            </div>
+            <div className="v">0%</div>
+            <div className="muted">Solved / Attempts</div>
+          </div>
+        </section>
+
+        <section className="panel" aria-label="Blocks inventory">
+          <div className="head">
+            <h6 className="title m-0">Blocks</h6>
+          </div>
+          <div className="tools">
+            <div className="btn-group" role="group" aria-label="Filter">
               <button 
-                className={`btn btn-ghost ${filterMode === 'all' ? 'active' : ''}`}
+                className="btn-ghost" 
+                data-filter="all" 
+                data-active={filterMode === 'all' ? 'true' : 'false'}
                 onClick={() => setFilterMode('all')}
               >
                 <i className="bi bi-grid-3x3-gap me-1"></i>All
               </button>
               <button 
-                className={`btn btn-ghost ${filterMode === 'collected' ? 'active' : ''}`}
+                className="btn-ghost" 
+                data-filter="collected" 
+                data-active={filterMode === 'collected' ? 'true' : 'false'}
                 onClick={() => setFilterMode('collected')}
               >
                 <i className="bi bi-check2-circle me-1"></i>Collected
               </button>
               <button 
-                className={`btn btn-ghost ${filterMode === 'missing' ? 'active' : ''}`}
+                className="btn-ghost" 
+                data-filter="missing" 
+                data-active={filterMode === 'missing' ? 'true' : 'false'}
                 onClick={() => setFilterMode('missing')}
               >
                 <i className="bi bi-dash-circle me-1"></i>Missing
               </button>
             </div>
-            <div className="ms-auto" style={{ minWidth: '220px' }}>
+            <div className="legend">
+              <span className="pill logic"><i className="bi bi-braces"></i> Logic</span>
+              <span className="pill loops"><i className="bi bi-arrow-repeat"></i> Loops</span>
+              <span className="pill math"><i className="bi bi-123"></i> Math</span>
+              <span className="pill text"><i className="bi bi-chat-dots"></i> Text</span>
+              <span className="pill lists"><i className="bi bi-list-ul"></i> Lists</span>
+              <span className="pill vars"><i className="bi bi-sliders"></i> Variables</span>
+              <span className="pill func"><i className="bi bi-puzzle"></i> Functions</span>
+            </div>
+            <div className="search">
               <input 
                 type="search" 
-                className="form-control" 
-                placeholder="Search blocks…"
+                placeholder="Search blocks…" 
+                aria-label="Search blocks"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
           </div>
-        </div>
-
-        <div className="row g-3">
-          {filteredBlocks.map(block => {
-            const hasBlock = collected.has(block.id);
-            const isDefaultBlock = block.isDefaultBlock;
-            
-            return (
-              <div key={block.id} className="col-12 col-md-6 col-lg-4">
-                <div className={`block-card ${hasBlock ? 'collected' : ''} ${getCatClass(block.category || block.cat)}`}>
-                  <div className="left">
-                    <div className="block-icon-container">
+          <div className="grid">
+            {filteredBlocks.map(block => {
+              const hasBlock = collected.has(block.id);
+              const catClass = getCatClass(block.category || block.cat);
+              
+              return (
+                <div key={block.id} className={catClass}>
+                  <div className={`block-card ${hasBlock ? 'collected' : 'missing'}`}>
+                    <div className="left">
                       <i className={`bi ${block.icon}`}></i>
-                      {hasBlock && (
-                        <div className="collected-indicator">
-                          <i className="bi bi-check-circle-fill"></i>
+                      <div>
+                        <div className="name">
+                          {block.name} {!hasBlock && <span className="state-missing">(missing)</span>}
                         </div>
-                      )}
+                        <div className="d-flex align-items-center gap-2">
+                          <span className="cat-badge">{block.cat}</span>
+                        </div>
+                      </div>
                     </div>
                     <div>
-                      <div className="name">{block.name}</div>
-                      <div className="d-flex align-items-center gap-2">
-                        <span className="cat-badge">{block.cat}</span>
+                      <button 
+                        className="btn-ghost sm"
+                        onClick={() => handleToggleBlock(block.id)}
+                      >
                         {hasBlock ? (
-                          <span className="badge rounded-pill bg-success-subtle text-success-emphasis">
-                            <i className="bi bi-check2"></i> collected
-                          </span>
+                          <>
+                            <i className="bi bi-x-circle me-1"></i>Remove
+                          </>
                         ) : (
-                          <span className={`badge rounded-pill ${
-                            isDefaultBlock 
-                              ? 'bg-primary-subtle text-primary-emphasis' 
-                              : 'bg-warning-subtle text-warning-emphasis'
-                          }`}>
-                            <i className={`bi ${isDefaultBlock ? 'bi-unlock' : 'bi-lock'}`}></i>
-                            {isDefaultBlock ? 'default' : 'QR required'}
-                          </span>
+                          <>
+                            <i className="bi bi-check2-circle me-1"></i>Mark
+                          </>
                         )}
-                      </div>
-                      {hasBlock && (
-                        <div className="small text-success mt-1">
-                          <i className="bi bi-trophy me-1"></i>
-                          Ready to use in Studio!
-                        </div>
-                      )}
+                      </button>
                     </div>
                   </div>
-                  <div>
-                    <button 
-                      className="btn btn-sm btn-ghost"
-                      onClick={() => handleToggleBlock(block.id)}
-                    >
-                      {hasBlock ? (
-                        <><i className="bi bi-x-circle me-1"></i>Remove</>
-                      ) : (
-                        <><i className="bi bi-check2-circle me-1"></i>Mark Collected</>
-                      )}
-                    </button>
-                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="mt-4 small muted">
-          Tip: Blocks are collected via AR QR scans and synced to your account; you can then use them in the Studio.
-        </div>
+              );
+            })}
+          </div>
+          <div className="muted" style={{ padding: '0 16px 16px', fontWeight: '800' }}>
+            Tip: scan AR QR codes around campus to collect more blocks.
+          </div>
+        </section>
       </main>
 
-      {/* QR 스캔 FAB 버튼 */}
       <button 
-        className="fab d-inline-flex align-items-center"
+        className="fab"
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
-          console.log('🔍 Scan button clicked');
           setShowScanner(true);
         }}
         disabled={loading}
-        title="Scan QR Code"
-        style={{
-          cursor: loading ? 'not-allowed' : 'pointer',
-          pointerEvents: loading ? 'none' : 'auto'
-        }}
+        aria-label="Scan QR"
       >
         {loading ? (
-          <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+          <span className="spinner"></span>
         ) : (
           <i className="bi bi-qr-code-scan"></i>
         )}
         <span className="fab-label">Scan</span>
       </button>
 
-      {/* Admin FAB 버튼 - 관리자만 표시 */}
       {isAdmin && (
-        <Link to="/admin">
-          <button 
-            className="fab fab--secondary fab-admin fab--sm" 
-            aria-label="Open Admin"
-            onClick={() => console.log('🔍 Admin button clicked')}
-          >
+        <Link to="/admin" className="d-inline-flex">
+          <button className="fab fab-secondary fab--sm" aria-label="Open Admin">
             <i className="bi bi-shield-lock"></i>
             <span className="fab-label">Admin</span>
           </button>
         </Link>
       )}
-      
-      {/* 디버깅: Admin 버튼 표시 상태 */}
-      {console.log('🔍 Admin button render check:', { isAdmin, shouldShow: isAdmin })}
 
       {/* QR 스캐너 모달 */}
       {showScanner && (

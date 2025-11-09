@@ -7,7 +7,7 @@ function AlertModal({
   type = 'info',
   title, 
   message, 
-  confirmText = '확인',
+  confirmText = 'OK',
   onConfirm 
 }) {
   const getIconAndColor = () => {
@@ -72,19 +72,18 @@ function AlertModal({
         </div>
         
         {title && (
-          <h5 className="mb-3" style={{ color: 'var(--brand-ink)', fontWeight: '700' }}>
+          <h5 className="mb-3" style={{ color: 'var(--ink)', fontWeight: '700' }}>
             {title}
           </h5>
         )}
         
-        <p className="mb-4 text-muted" style={{ lineHeight: '1.5' }}>
+        <p className="mb-4" style={{ lineHeight: '1.5', color: 'var(--muted)' }}>
           {message}
         </p>
         
         <button 
-          className="btn btn-brand px-4 py-2"
+          className="btn-solve btn-wide"
           onClick={handleConfirm}
-          style={{ minWidth: '100px' }}
         >
           {confirmText}
         </button>

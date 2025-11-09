@@ -1,29 +1,41 @@
 import React, { useState } from 'react';
+import AlertModal from './AlertModal';
 
 /**
- * 간단한 QR 스캐너 컴포넌트 (테스트용)
- * 실제 카메라 스캔 대신 수동 입력을 제공합니다.
+ * Simple QR Scanner Component (Test Mode)
+ * Provides manual input instead of actual camera scanning.
  */
 function SimpleQRScanner({ onScan, onClose }) {
   const [qrData, setQrData] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [alertModal, setAlertModal] = useState({ isOpen: false, type: 'error', title: '', message: '' });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (!qrData.trim()) {
-      alert('QR 데이터를 입력해주세요.');
+      setAlertModal({
+        isOpen: true,
+        type: 'error',
+        title: 'Input Required',
+        message: 'Please enter QR data.'
+      });
       return;
     }
 
     setIsProcessing(true);
     
     try {
-      // JSON 유효성 검사
+      // JSON validation
       JSON.parse(qrData);
       onScan(qrData.trim());
     } catch (err) {
-      alert('올바른 JSON 형식의 QR 데이터를 입력해주세요.');
+      setAlertModal({
+        isOpen: true,
+        type: 'error',
+        title: 'Invalid Format',
+        message: 'Please enter valid JSON format QR data.'
+      });
     } finally {
       setIsProcessing(false);
     }
@@ -100,14 +112,14 @@ function SimpleQRScanner({ onScan, onClose }) {
             >
               <div className="alert alert-info" style={{ backgroundColor: '#d1ecf1', color: '#0c5460' }}>
                 <i className="bi bi-info-circle me-2"></i>
-                <strong>테스트 모드:</strong> 실제 카메라 대신 QR 데이터를 직접 입력하여 테스트할 수 있습니다.
+                <strong>Test Mode:</strong> You can test by directly entering QR data instead of using the camera.
               </div>
 
               <form onSubmit={handleSubmit}>
                 <div className="mb-3">
                   <label className="form-label" style={{ color: '#212529' }}>
                     <i className="bi bi-keyboard me-2"></i>
-                    QR 데이터 입력
+                    Enter QR Data
                   </label>
                   <textarea 
                     className="form-control" 
@@ -118,7 +130,7 @@ function SimpleQRScanner({ onScan, onClose }) {
                     required
                   />
                   <div className="form-text" style={{ color: '#6c757d' }}>
-                    Admin에서 생성한 QR의 <code style={{ backgroundColor: '#f8f9fa', color: '#e83e8c' }}>qrData</code> 필드 내용을 복사해서 붙여넣으세요.
+                    Copy the <code style={{ backgroundColor: '#f8f9fa', color: '#e83e8c' }}>qrData</code> field content from the QR created in Admin and paste it here.
                   </div>
                 </div>
 
@@ -131,12 +143,12 @@ function SimpleQRScanner({ onScan, onClose }) {
                     {isProcessing ? (
                       <>
                         <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
-                        처리 중...
+                        Processing...
                       </>
                     ) : (
                       <>
                         <i className="bi bi-check-circle me-1"></i>
-                        QR 데이터 처리
+                        Process QR Data
                       </>
                     )}
                   </button>
@@ -146,24 +158,32 @@ function SimpleQRScanner({ onScan, onClose }) {
                     onClick={handleClose}
                   >
                     <i className="bi bi-x-circle me-1"></i>
-                    취소
+                    Cancel
                   </button>
                 </div>
               </form>
 
               <div className="mt-4" style={{ color: '#212529' }}>
-                <h6 style={{ color: '#212529' }}>사용 방법:</h6>
+                <h6 style={{ color: '#212529' }}>How to Use:</h6>
                 <ol className="small" style={{ color: '#6c757d' }}>
-                  <li>Admin 페이지에서 QR 코드를 생성합니다</li>
-                  <li>생성된 QR의 <code style={{ backgroundColor: '#f8f9fa', color: '#e83e8c' }}>qrData</code> 필드를 복사합니다</li>
-                  <li>위 텍스트 영역에 붙여넣습니다</li>
-                  <li>"QR 데이터 처리" 버튼을 클릭합니다</li>
+                  <li>Create a QR code in the Admin page</li>
+                  <li>Copy the <code style={{ backgroundColor: '#f8f9fa', color: '#e83e8c' }}>qrData</code> field from the created QR</li>
+                  <li>Paste it in the text area above</li>
+                  <li>Click the "Process QR Data" button</li>
                 </ol>
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      <AlertModal
+        isOpen={alertModal.isOpen}
+        onClose={() => setAlertModal({ ...alertModal, isOpen: false })}
+        type={alertModal.type}
+        title={alertModal.title}
+        message={alertModal.message}
+      />
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminProtectedRoute from './components/AdminProtectedRoute';
+import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Challenges from './pages/Challenges';
@@ -16,14 +17,7 @@ function AppRoutes() {
   
   return (
     <Routes>
-      <Route 
-        path="/" 
-        element={
-          currentUser ? 
-            <Navigate to="/challenges" replace /> : 
-            <Navigate to="/login" replace />
-        } 
-      />
+      <Route path="/" element={<Home />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/challenges" element={

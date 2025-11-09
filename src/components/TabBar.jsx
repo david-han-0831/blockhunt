@@ -9,7 +9,7 @@ function TabBar() {
   };
 
   return (
-    <nav className="tabbar d-flex align-items-center gap-2">
+    <nav className="tabbar" aria-label="Bottom Tabs">
       <Link className={`tab ${isActive('/')}`} to="/">
         <i className="bi bi-house"></i>
         <span className="label">Home</span>
