@@ -66,11 +66,6 @@ function Challenges() {
   const { error, success } = useToast();
   const { isAdmin } = useAdminAuth();
 
-  // Firebase에서 문제 목록 불러오기
-  useEffect(() => {
-    loadQuestions();
-  }, [loadQuestions]);
-
   const loadQuestions = useCallback(async () => {
     setLoading(true);
     try {
@@ -92,7 +87,12 @@ function Challenges() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [error]);
+
+  // Firebase에서 문제 목록 불러오기
+  useEffect(() => {
+    loadQuestions();
+  }, [loadQuestions]);
 
   const matchesDiff = (q) => diffFilter === 'all' || q.difficulty === diffFilter;
   const matchesTag = (q) => {

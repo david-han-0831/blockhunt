@@ -15,12 +15,6 @@ function QRViewModal({ show, onHide, qrData, blockInfo }) {
   const [qrImageUrl, setQrImageUrl] = useState('');
   const [alertModal, setAlertModal] = useState({ isOpen: false, type: 'success', title: '', message: '' });
 
-  useEffect(() => {
-    if (show && qrData && canvasRef.current) {
-      generateQRCode();
-    }
-  }, [show, qrData, generateQRCode]);
-
   const generateQRCode = useCallback(async () => {
     try {
       // QR 코드에 담을 데이터 (JSON 형태)
@@ -52,6 +46,12 @@ function QRViewModal({ show, onHide, qrData, blockInfo }) {
       console.error('QR code generation error:', error);
     }
   }, [qrData]);
+
+  useEffect(() => {
+    if (show && qrData && canvasRef.current) {
+      generateQRCode();
+    }
+  }, [show, qrData, generateQRCode]);
 
   const handleDownload = () => {
     if (qrImageUrl) {

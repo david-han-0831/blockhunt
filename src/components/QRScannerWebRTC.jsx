@@ -144,7 +144,7 @@ function QRScannerWebRTC({ onScan, onClose }) {
       console.error('❌ [QRScannerWebRTC] Camera switch failed:', err);
       setIsSwitchingCamera(false);
     }
-  }, [availableCameras, currentCameraIndex, isSwitchingCamera, stopQRScanner, stopCamera, onScan, startQRScanner, startQRScannerWithCamera]);
+  }, [availableCameras, currentCameraIndex, isSwitchingCamera, stopQRScanner, stopCamera, onScan]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Firebase에서 블록 데이터 로드
   useEffect(() => {

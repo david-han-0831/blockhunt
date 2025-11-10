@@ -340,7 +340,19 @@ function Admin() {
     }
   }, [error]);
 
-  // QR 코드 생성
+  // 문제 목록 및 제출물 불러오기
+  useEffect(() => {
+    loadQuestions();
+    loadSubmissions();
+  }, [loadQuestions, loadSubmissions]);
+
+  // Blocks & QR 데이터 로딩
+  useEffect(() => {
+    if (activeTab === 'blocks') {
+      loadBlocks();
+      loadQRCodes();
+    }
+  }, [activeTab, loadBlocks, loadQRCodes]);
   const handleCreateQR = async (e) => {
     e.preventDefault();
     

@@ -10,7 +10,6 @@ function Login() {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
-  const [validated, setValidated] = useState(false);
   const [emailInvalid, setEmailInvalid] = useState(false);
   const [passwordInvalid, setPasswordInvalid] = useState(false);
   const [modal, setModal] = useState({ isOpen: false, type: 'info', title: '', message: '' });
@@ -63,13 +62,11 @@ function Login() {
     
     if (!emailValid || !passwordValid) {
       e.stopPropagation();
-      setValidated(true);
       setEmailInvalid(!emailValid);
       setPasswordInvalid(!passwordValid);
       return;
     }
     
-    setValidated(true);
     setEmailInvalid(false);
     setPasswordInvalid(false);
     
