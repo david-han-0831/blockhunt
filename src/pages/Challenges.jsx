@@ -87,12 +87,12 @@ function Challenges() {
     } finally {
       setLoading(false);
     }
-  }, [error]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Firebase에서 문제 목록 불러오기
   useEffect(() => {
     loadQuestions();
-  }, [loadQuestions]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const matchesDiff = (q) => diffFilter === 'all' || q.difficulty === diffFilter;
   const matchesTag = (q) => {
