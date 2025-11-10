@@ -1386,15 +1386,45 @@ function QRScannerWebRTC({ onScan, onClose }) {
               </div>
               <div className="modal-body text-center">
                 <div className="mb-3">
-                  <i className="bi bi-qr-code-scan text-success" style={{ fontSize: '3rem' }}></i>
+                  <i className="bi bi-check-circle-fill text-success" style={{ fontSize: '4rem' }}></i>
                 </div>
-                <h6 className="mb-3">Scanned data:</h6>
-                <div className="alert alert-light border">
-                  <code className="text-break">{scannedData}</code>
-                </div>
-                <p className="text-muted small">
-                  Block acquired! 🎉
-                </p>
+                {(() => {
+                  try {
+                    const parsedData = JSON.parse(scannedData);
+                    const blockName = parsedData.name || 'Unknown Block';
+                    return (
+                      <>
+                        <h4 className="mb-3 fw-bold text-success">
+                          블록을 획득했습니다! 🎉
+                        </h4>
+                        <div className="alert alert-success border-0" style={{ backgroundColor: '#d4edda' }}>
+                          <div className="d-flex align-items-center justify-content-center gap-2">
+                            <i className="bi bi-puzzle-fill" style={{ fontSize: '1.5rem' }}></i>
+                            <div>
+                              <div className="fw-bold">{blockName}</div>
+                              <div className="small text-muted mt-1">
+                                이제 Studio에서 이 블록을 사용할 수 있습니다!
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    );
+                  } catch (err) {
+                    return (
+                      <>
+                        <h4 className="mb-3 fw-bold text-success">
+                          블록을 획득했습니다! 🎉
+                        </h4>
+                        <div className="alert alert-success border-0" style={{ backgroundColor: '#d4edda' }}>
+                          <div className="small">
+                            이제 Studio에서 이 블록을 사용할 수 있습니다!
+                          </div>
+                        </div>
+                      </>
+                    );
+                  }
+                })()}
               </div>
               <div className="modal-footer">
                 <button 
