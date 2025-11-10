@@ -239,10 +239,13 @@ export const updateBlockSetting = async (blockId, isDefaultBlock) => {
 };
 
 // 기본 내보내기
-export default {
+const migrateBlocksModule = {
   INITIAL_BLOCKS,
   migrateBlocksToFirestore,
+  migrateBlocksToFirestoreWithProgress,
   verifyBlocksInFirestore,
   updateBlockSetting
 };
+
+export default migrateBlocksModule;
 

@@ -281,7 +281,7 @@ function Studio() {
         workspaceRef.current.dispose();
       }
     };
-  }, [blocksLoaded, collectedBlocks, allBlocks]);
+  }, [blocksLoaded, collectedBlocks, allBlocks, questionText]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Get Python code from Blockly workspace
   const getPython = () => {

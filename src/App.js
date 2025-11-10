@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminProtectedRoute from './components/AdminProtectedRoute';
@@ -13,8 +13,6 @@ import Admin from './pages/Admin';
 import MigrateBlocks from './pages/MigrateBlocks';
 
 function AppRoutes() {
-  const { currentUser } = useAuth();
-  
   return (
     <Routes>
       <Route path="/" element={<Home />} />

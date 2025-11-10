@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react';
 import AppBar from '../components/AppBar';
 import TabBar from '../components/TabBar';
 import QRViewModal from '../components/QRViewModal';
@@ -70,7 +69,7 @@ function Admin() {
   useEffect(() => {
     loadQuestions();
     loadSubmissions();
-  }, []);
+  }, [loadQuestions, loadSubmissions]);
 
   // Blocks & QR 데이터 로딩
   useEffect(() => {
@@ -78,9 +77,9 @@ function Admin() {
       loadBlocks();
       loadQRCodes();
     }
-  }, [activeTab]);
+  }, [activeTab, loadBlocks, loadQRCodes]);
 
-  const loadQuestions = async () => {
+  const loadQuestions = useCallback(async () => {
     setLoading(true);
     try {
       const result = await getQuestions();
@@ -94,10 +93,10 @@ function Admin() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [error]);
 
   // 제출물 불러오기
-  const loadSubmissions = async (filters = {}) => {
+  const loadSubmissions = useCallback(async (filters = {}) => {
     setSubmissionsLoading(true);
     try {
       const result = await getAllSubmissions(filters);
@@ -125,7 +124,7 @@ function Admin() {
     } finally {
       setSubmissionsLoading(false);
     }
-  };
+  }, [error]);
 
   // 문제 생성/수정
   const handleSubmit = async (e) => {
@@ -260,7 +259,7 @@ function Admin() {
   // ==================== 블록 관리 함수들 ====================
 
   // 블록 목록 불러오기
-  const loadBlocks = async () => {
+  const loadBlocks = useCallback(async () => {
     setBlocksLoading(true);
     try {
       console.log('🔍 Loading blocks from Firestore...');
@@ -280,7 +279,7 @@ function Admin() {
     } finally {
       setBlocksLoading(false);
     }
-  };
+  }, [error]);
 
   // 블록 설정 업데이트
   const handleBlockToggle = async (blockId, isDefaultBlock) => {
@@ -326,7 +325,7 @@ function Admin() {
     return icons[category] || 'bi-puzzle';
   };
 
-  const loadQRCodes = async () => {
+  const loadQRCodes = useCallback(async () => {
     try {
       const result = await getQRCodes();
       if (result.success) {
@@ -339,7 +338,7 @@ function Admin() {
     } finally {
       setQrCodesLoading(false);
     }
-  };
+  }, [error]);
 
   // QR 코드 생성
   const handleCreateQR = async (e) => {

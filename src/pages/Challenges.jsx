@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import AppBar from '../components/AppBar';
 import TabBar from '../components/TabBar';
@@ -69,9 +69,9 @@ function Challenges() {
   // Firebase에서 문제 목록 불러오기
   useEffect(() => {
     loadQuestions();
-  }, []);
+  }, [loadQuestions]);
 
-  const loadQuestions = async () => {
+  const loadQuestions = useCallback(async () => {
     setLoading(true);
     try {
       const result = await getQuestions();
@@ -92,7 +92,7 @@ function Challenges() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   const matchesDiff = (q) => diffFilter === 'all' || q.difficulty === diffFilter;
   const matchesTag = (q) => {

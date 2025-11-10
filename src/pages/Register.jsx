@@ -12,7 +12,6 @@ function Register() {
   const { currentUser } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [validated, setValidated] = useState(false);
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [modal, setModal] = useState({ isOpen: false, type: 'info', title: '', message: '' });
@@ -154,7 +153,6 @@ function Register() {
     }
 
     setFieldErrors(newErrors);
-    setValidated(true);
 
     if (!isValid) {
       return;
@@ -372,7 +370,7 @@ function Register() {
                   required 
                   onChange={handleInputChange}
                 />
-                <span>I agree to the <a className="link" href="#" onClick={(e) => e.preventDefault()}>Terms</a> and <a className="link" href="#" onClick={(e) => e.preventDefault()}>Privacy</a></span>
+                <span>I agree to the <a className="link" href="#terms" onClick={(e) => e.preventDefault()}>Terms</a> and <a className="link" href="#privacy" onClick={(e) => e.preventDefault()}>Privacy</a></span>
               </label>
             </div>
 

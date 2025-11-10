@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import QRCode from 'qrcode';
 import AlertModal from './AlertModal';
 
@@ -19,9 +19,9 @@ function QRViewModal({ show, onHide, qrData, blockInfo }) {
     if (show && qrData && canvasRef.current) {
       generateQRCode();
     }
-  }, [show, qrData]);
+  }, [show, qrData, generateQRCode]);
 
-  const generateQRCode = async () => {
+  const generateQRCode = useCallback(async () => {
     try {
       // QR 코드에 담을 데이터 (JSON 형태)
       const qrPayload = {
@@ -51,7 +51,7 @@ function QRViewModal({ show, onHide, qrData, blockInfo }) {
     } catch (error) {
       console.error('QR code generation error:', error);
     }
-  };
+  }, [qrData]);
 
   const handleDownload = () => {
     if (qrImageUrl) {

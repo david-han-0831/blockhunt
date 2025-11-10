@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import AppBar from '../components/AppBar';
 import TabBar from '../components/TabBar';
@@ -34,13 +34,8 @@ function Profile() {
   // 디버깅: 관리자 상태 확인
   console.log('🔍 Profile - Admin status:', { isAdmin, isLoading, currentUser: currentUser?.uid });
 
-  useEffect(() => {
-    loadUserData();
-    loadBlocks();
-  }, [currentUser]);
-
   // 사용자 데이터 및 블록 정보 로드
-  const loadUserData = async () => {
+  const loadUserData = useCallback(async () => {
     if (!currentUser) {
       console.log('⚠️ No current user, skipping loadUserData');
       return;
@@ -87,7 +82,14 @@ function Profile() {
       console.log('💾 Error fallback - blocks from localStorage:', savedBlocks);
       setCollected(new Set(savedBlocks));
     }
-  };
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (currentUser) {
+      loadUserData();
+      loadBlocks();
+    }
+  }, [currentUser, loadUserData]);
 
   // 블록 카탈로그 로드
   const loadBlocks = async () => {
@@ -237,7 +239,6 @@ function Profile() {
 
   const totalBlocks = blocks.length;
   const collectedCount = collected.size;
-  const missingCount = totalBlocks - collectedCount;
   const collectedPercent = totalBlocks > 0 ? Math.round((collectedCount / totalBlocks) * 100) : 0;
 
   return (

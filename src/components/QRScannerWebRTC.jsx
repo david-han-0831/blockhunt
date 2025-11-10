@@ -144,7 +144,7 @@ function QRScannerWebRTC({ onScan, onClose }) {
       console.error('❌ [QRScannerWebRTC] Camera switch failed:', err);
       setIsSwitchingCamera(false);
     }
-  }, [availableCameras, currentCameraIndex, isSwitchingCamera, stopQRScanner, stopCamera, onScan]);
+  }, [availableCameras, currentCameraIndex, isSwitchingCamera, stopQRScanner, stopCamera, onScan, startQRScanner, startQRScannerWithCamera]);
 
   // Firebase에서 블록 데이터 로드
   useEffect(() => {
@@ -389,7 +389,6 @@ function QRScannerWebRTC({ onScan, onClose }) {
             
             // 화면을 4개 영역으로 나눔: 상, 하, 좌, 우
             const region = index % 4; // 0: 상, 1: 하, 2: 좌, 3: 우
-            const positionInRegion = Math.floor(index / 4); // 해당 영역 내 위치
             
             let x, y;
             
@@ -408,6 +407,10 @@ function QRScannerWebRTC({ onScan, onClose }) {
                 break;
               case 3: // 오른쪽
                 x = visibleWidth * 0.3 + Math.random() * visibleWidth * 0.2; // 오른쪽 영역
+                y = (Math.random() - 0.5) * visibleHeight * 0.8;
+                break;
+              default:
+                x = (Math.random() - 0.5) * visibleWidth * 0.8;
                 y = (Math.random() - 0.5) * visibleHeight * 0.8;
                 break;
             }
@@ -753,7 +756,7 @@ function QRScannerWebRTC({ onScan, onClose }) {
       setIsScanning(false);
       safeCleanup();
     }
-  }, [isInitialized]);
+  }, [isInitialized, safeCleanup, startQRScannerWithCamera]);
 
   // Three.js 초기화 (isScanning이 true일 때)
   useEffect(() => {
@@ -987,14 +990,14 @@ function QRScannerWebRTC({ onScan, onClose }) {
     return () => {
       clearTimeout(timer);
     };
-  }, []); // 의존성 배열을 비워서 한 번만 실행
+  }, [isInitialized, startQRScanner]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 컴포넌트 언마운트 시 cleanup
   useEffect(() => {
     return () => {
       safeCleanup();
     };
-  }, []); // 의존성 배열을 비워서 한 번만 실행
+  }, [safeCleanup]);
 
   const handleClose = () => {
     safeCleanup();

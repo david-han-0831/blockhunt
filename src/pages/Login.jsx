@@ -56,7 +56,6 @@ function Login() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const form = e.currentTarget;
     
     // Validate form
     const emailValid = emailRef.current?.validity.valid ?? false;
@@ -196,7 +195,7 @@ function Login() {
                 <input type="checkbox" id="remember" />
                 <span>Remember me</span>
               </label>
-              <a className="link" href="#" onClick={(e) => e.preventDefault()}>Forgot password?</a>
+              <a className="link" href="#forgot-password" onClick={(e) => e.preventDefault()}>Forgot password?</a>
             </div>
 
             <button 

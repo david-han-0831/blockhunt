@@ -10,7 +10,6 @@ import {
   query,
   where,
   orderBy,
-  limit,
   arrayUnion
 } from 'firebase/firestore';
 import { db } from './firebaseConfig';
