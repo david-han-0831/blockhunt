@@ -6,6 +6,10 @@ import './styles/styles.css';
 import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
+import * as THREE from 'three';
+
+// Three.js를 전역에 노출 (AR.js가 사용할 수 있도록)
+window.THREE = THREE;
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
