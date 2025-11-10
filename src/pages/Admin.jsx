@@ -65,20 +65,6 @@ function Admin() {
   const { currentUser } = useAuth();
   const { success, error } = useToast();
 
-  // 문제 목록 및 제출물 불러오기
-  useEffect(() => {
-    loadQuestions();
-    loadSubmissions();
-  }, [loadQuestions, loadSubmissions]);
-
-  // Blocks & QR 데이터 로딩
-  useEffect(() => {
-    if (activeTab === 'blocks') {
-      loadBlocks();
-      loadQRCodes();
-    }
-  }, [activeTab, loadBlocks, loadQRCodes]);
-
   const loadQuestions = useCallback(async () => {
     setLoading(true);
     try {
@@ -344,7 +330,7 @@ function Admin() {
   useEffect(() => {
     loadQuestions();
     loadSubmissions();
-  }, [loadQuestions, loadSubmissions]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Blocks & QR 데이터 로딩
   useEffect(() => {
@@ -352,7 +338,7 @@ function Admin() {
       loadBlocks();
       loadQRCodes();
     }
-  }, [activeTab, loadBlocks, loadQRCodes]);
+  }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
   const handleCreateQR = async (e) => {
     e.preventDefault();
     
