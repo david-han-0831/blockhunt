@@ -24,8 +24,7 @@ function Register() {
     email: false,
     username: false,
     password: false,
-    confirm: false,
-    terms: false
+    confirm: false
   });
   const [passwordMatch, setPasswordMatch] = useState(true);
 
@@ -35,7 +34,6 @@ function Register() {
   const usernameRef = useRef(null);
   const passwordRef = useRef(null);
   const confirmRef = useRef(null);
-  const termsRef = useRef(null);
 
   // body에 login-page 클래스 추가/제거
   useEffect(() => {
@@ -60,7 +58,6 @@ function Register() {
     if (usernameRef.current) usernameRef.current.value = '';
     if (passwordRef.current) passwordRef.current.value = '';
     if (confirmRef.current) confirmRef.current.value = '';
-    if (termsRef.current) termsRef.current.checked = false;
   }, []);
 
   // Password match validation
@@ -118,7 +115,6 @@ function Register() {
     const username = usernameRef.current;
     const password = passwordRef.current;
     const confirm = confirmRef.current;
-    const terms = termsRef.current;
 
     let isValid = true;
     const newErrors = { ...fieldErrors };
@@ -145,10 +141,6 @@ function Register() {
     }
     if (!confirm?.validity.valid || !passwordMatch) {
       newErrors.confirm = true;
-      isValid = false;
-    }
-    if (!terms?.checked) {
-      newErrors.terms = true;
       isValid = false;
     }
 
@@ -358,20 +350,6 @@ function Register() {
               <div className="error" style={{ color: passwordMatch && confirm ? '#15803d' : '#b91c1c' }}>
                 {passwordMatch && confirm ? 'Looks good.' : 'Passwords must match.'}
               </div>
-            </div>
-
-            <div className="row-aux">
-              <label className="check">
-                <input 
-                  type="checkbox" 
-                  id="terms" 
-                  name="terms"
-                  ref={termsRef}
-                  required 
-                  onChange={handleInputChange}
-                />
-                <span>I agree to the <a className="link" href="#terms" onClick={(e) => e.preventDefault()}>Terms</a> and <a className="link" href="#privacy" onClick={(e) => e.preventDefault()}>Privacy</a></span>
-              </label>
             </div>
 
             <button 

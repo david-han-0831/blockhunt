@@ -229,9 +229,19 @@ function Profile() {
 
   const filteredBlocks = blocks.filter(block => {
     const hasBlock = collected.has(block.id);
-    const matchesFilter = filterMode === 'all' || 
-                         (filterMode === 'collected' && hasBlock) ||
-                         (filterMode === 'missing' && !hasBlock);
+    // QR Required 체크: isDefaultBlock이 false이거나 qrRequired가 true인 블록
+    const isQRRequired = block.isDefaultBlock === false || block.qrRequired === true;
+    
+    let matchesFilter = false;
+    if (filterMode === 'all') {
+      matchesFilter = true;
+    } else if (filterMode === 'collected') {
+      matchesFilter = hasBlock;
+    } else if (filterMode === 'missing') {
+      // Missing 탭: QR Required이면서 아직 수집하지 않은 블록만 표시
+      matchesFilter = isQRRequired && !hasBlock;
+    }
+    
     const matchesSearch = !searchQuery || 
                          block.name.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesFilter && matchesSearch;

@@ -74,7 +74,10 @@ function AppBar({ title = 'BlockHunt', hideLogo = false }) {
               <div style={{ 
                 display: 'flex', 
                 alignItems: 'center', 
-                gap: '0.5rem' 
+                gap: '0.5rem',
+                marginLeft: '1rem',
+                paddingLeft: '1rem',
+                borderLeft: '1px solid var(--border, rgba(0,0,0,0.1))'
               }}>
                 <span className="user-info" style={{ 
                   fontSize: '0.875rem', 

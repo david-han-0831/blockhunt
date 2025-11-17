@@ -44,6 +44,40 @@ export const getUserProfile = async (uid) => {
   }
 };
 
+// 이메일과 유저 이름으로 사용자 찾기
+export const findUserByEmailAndUsername = async (email, username) => {
+  try {
+    // 이메일로 먼저 확인
+    const emailQuery = query(
+      collection(db, 'users'),
+      where('email', '==', email.toLowerCase().trim())
+    );
+    const emailSnapshot = await getDocs(emailQuery);
+    
+    if (emailSnapshot.empty) {
+      return { success: false, error: 'No user found with this email address.' };
+    }
+    
+    // 이메일로 찾은 사용자 중에서 유저 이름이 일치하는지 확인
+    let foundUser = null;
+    emailSnapshot.forEach((docSnap) => {
+      const userData = docSnap.data();
+      if (userData.username && userData.username.toLowerCase().trim() === username.toLowerCase().trim()) {
+        foundUser = { uid: docSnap.id, ...userData };
+      }
+    });
+    
+    if (!foundUser) {
+      return { success: false, error: 'Username does not match this email address.' };
+    }
+    
+    return { success: true, data: foundUser };
+  } catch (error) {
+    console.error('findUserByEmailAndUsername error:', error);
+    return { success: false, error: error.message };
+  }
+};
+
 // 사용자 프로필 업데이트
 export const updateUserProfile = async (uid, data) => {
   try {

@@ -3,7 +3,9 @@ import {
   signInWithEmailAndPassword,
   signOut,
   updateProfile,
-  onAuthStateChanged
+  onAuthStateChanged,
+  sendPasswordResetEmail,
+  updatePassword
 } from 'firebase/auth';
 import { auth } from './firebaseConfig';
 
@@ -51,5 +53,29 @@ export const observeAuthState = (callback) => {
 // 현재 사용자 가져오기
 export const getCurrentUser = () => {
   return auth.currentUser;
+};
+
+// 비밀번호 리셋 이메일 발송 (기존 방식, 사용 안 함)
+export const resetPassword = async (email) => {
+  try {
+    await sendPasswordResetEmail(auth, email);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};
+
+// 비밀번호 직접 업데이트 (로그인된 사용자용)
+export const updateUserPassword = async (newPassword) => {
+  try {
+    const user = auth.currentUser;
+    if (!user) {
+      return { success: false, error: 'User must be logged in to update password.' };
+    }
+    await updatePassword(user, newPassword);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
 };
 
