@@ -311,8 +311,9 @@ function QRScannerWebRTC({ onScan, onClose }) {
           // QR 스캔 후: 수집 완료 애니메이션 (펄스만)
           blocks.forEach((block) => {
             // 펄스 효과 (크기 변화) - 원래 scale 값을 기준으로 적용
+            // 애니메이션 속도 조절: 0.01 -> 0.003으로 변경하여 느리게
             const baseScale = block.userData.baseScale || 20; // 기본값 20 (config에서 설정한 값)
-            const pulseFactor = 1 + Math.sin(Date.now() * 0.01 + (block.userData.blockId?.charCodeAt(0) || 0)) * 0.2;
+            const pulseFactor = 1 + Math.sin(Date.now() * 0.003 + (block.userData.blockId?.charCodeAt(0) || 0)) * 0.2;
             const finalScale = baseScale * pulseFactor;
             block.scale.set(finalScale, finalScale, finalScale);
           });
@@ -653,6 +654,8 @@ function QRScannerWebRTC({ onScan, onClose }) {
                 };
                 
                 // 머티리얼 설정 및 clickable 설정 (C4D Export 호환성)
+                let materialCount = 0;
+                let colorInfo = [];
                 model.traverse((child) => {
                   if (child.isMesh) {
                     // 모든 mesh에 clickable 설정
@@ -666,10 +669,28 @@ function QRScannerWebRTC({ onScan, onClose }) {
                         if (material) {
                           material.side = THREE.DoubleSide;
                           material.needsUpdate = true;
+                          
+                          // 색상 정보 확인 및 로그
+                          materialCount++;
+                          if (material.color) {
+                            const colorHex = '#' + material.color.getHexString();
+                            colorInfo.push({
+                              type: material.type,
+                              color: colorHex,
+                              name: material.name || 'unnamed'
+                            });
+                          }
                         }
                       });
                     }
                   }
+                });
+                
+                // 색상 적용 확인 로그
+                console.log(`🎨 [QRScannerWebRTC] Material info for ${blockIdToLoad}:`, {
+                  materialCount,
+                  colors: colorInfo,
+                  hasColors: colorInfo.length > 0
                 });
                 
                 // 블록별 설정 적용 (크기, 위치, 회전, 자동 중앙 정렬)
@@ -695,7 +716,9 @@ function QRScannerWebRTC({ onScan, onClose }) {
                     scale: { x: model.scale.x, y: model.scale.y, z: model.scale.z },
                     baseScale: model.userData.baseScale,
                     boundingBoxSize: { x: size.x, y: size.y, z: size.z },
-                    position: { x: model.position.x, y: model.position.y, z: model.position.z }
+                    position: { x: model.position.x, y: model.position.y, z: model.position.z },
+                    materialCount,
+                    colors: colorInfo
                   }
                 }));
                 
@@ -1646,6 +1669,33 @@ function QRScannerWebRTC({ onScan, onClose }) {
                           <div style={{ marginBottom: '8px' }}>
                             <div style={{ color: '#9C27B0', fontWeight: 'bold' }}>Final Bounding Box:</div>
                             <div>Size: ({debugInfo.finalModelInfo.boundingBoxSize?.x?.toFixed(2)}, {debugInfo.finalModelInfo.boundingBoxSize?.y?.toFixed(2)}, {debugInfo.finalModelInfo.boundingBoxSize?.z?.toFixed(2)})</div>
+                          </div>
+                        )}
+                        
+                        {/* 색상 정보 */}
+                        {debugInfo.modelInfo && debugInfo.modelInfo.colors && debugInfo.modelInfo.colors.length > 0 && (
+                          <div style={{ marginBottom: '8px' }}>
+                            <div style={{ color: '#FF9800', fontWeight: 'bold' }}>Colors ({debugInfo.modelInfo.materialCount}):</div>
+                            {debugInfo.modelInfo.colors.slice(0, 3).map((colorInfo, idx) => (
+                              <div key={idx} style={{ fontSize: '10px', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                                <div 
+                                  style={{ 
+                                    width: '12px', 
+                                    height: '12px', 
+                                    backgroundColor: colorInfo.color, 
+                                    border: '1px solid rgba(255,255,255,0.3)',
+                                    borderRadius: '2px'
+                                  }} 
+                                />
+                                <span>{colorInfo.color}</span>
+                                {colorInfo.name && colorInfo.name !== 'unnamed' && (
+                                  <span style={{ color: '#999' }}>({colorInfo.name})</span>
+                                )}
+                              </div>
+                            ))}
+                            {debugInfo.modelInfo.colors.length > 3 && (
+                              <div style={{ fontSize: '10px', color: '#999' }}>+{debugInfo.modelInfo.colors.length - 3} more...</div>
+                            )}
                           </div>
                         )}
                       </div>
