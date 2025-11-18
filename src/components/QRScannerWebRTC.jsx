@@ -259,6 +259,7 @@ function QRScannerWebRTC({ onScan, onClose }) {
           arCanvasRef.current.style.zIndex = '1000';
           arCanvasRef.current.style.pointerEvents = 'none';
           arCanvasRef.current.style.backgroundColor = 'transparent';
+          arCanvasRef.current.style.touchAction = 'none'; // 모바일 터치 기본 동작 방지
           
           console.log('🎨 [QRScannerWebRTC] Canvas size set to match video:', {
             width: arCanvasRef.current.width,
@@ -708,6 +709,7 @@ function QRScannerWebRTC({ onScan, onClose }) {
           canvas.style.position = 'absolute';
           canvas.style.zIndex = '1000';
           canvas.style.pointerEvents = 'auto'; // 클릭 이벤트 활성화
+          canvas.style.touchAction = 'none'; // 모바일 터치 기본 동작 방지
         }
       };
 
@@ -1004,7 +1006,13 @@ function QRScannerWebRTC({ onScan, onClose }) {
     }
 
     const handleClick = (event) => {
-      console.log('🖱️ [QRScannerWebRTC] Canvas clicked in useEffect!');
+      console.log('🖱️ [QRScannerWebRTC] Canvas clicked/touched in useEffect!', event.type);
+      
+      // 모바일 터치 이벤트의 기본 동작 방지 (스크롤, 줌 등)
+      if (event.type === 'touchend' || event.type === 'touchstart') {
+        event.preventDefault();
+        event.stopPropagation();
+      }
       
       if (!arCanvasRef.current || !cameraRef.current || !sceneRef.current || !raycasterRef.current) {
         return;
@@ -1013,14 +1021,30 @@ function QRScannerWebRTC({ onScan, onClose }) {
       const canvas = arCanvasRef.current;
       const rect = canvas.getBoundingClientRect();
       
-      const mouseX = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-      const mouseY = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+      // 터치 이벤트와 마우스 이벤트 모두 처리
+      let clientX, clientY;
+      if (event.touches && event.touches.length > 0) {
+        // touchstart 이벤트
+        clientX = event.touches[0].clientX;
+        clientY = event.touches[0].clientY;
+      } else if (event.changedTouches && event.changedTouches.length > 0) {
+        // touchend 이벤트
+        clientX = event.changedTouches[0].clientX;
+        clientY = event.changedTouches[0].clientY;
+      } else {
+        // 마우스 이벤트
+        clientX = event.clientX;
+        clientY = event.clientY;
+      }
+      
+      const mouseX = ((clientX - rect.left) / rect.width) * 2 - 1;
+      const mouseY = -((clientY - rect.top) / rect.height) * 2 + 1;
       
       mouseRef.current.set(mouseX, mouseY);
       raycasterRef.current.setFromCamera(mouseRef.current, cameraRef.current);
       const intersects = raycasterRef.current.intersectObjects(sceneRef.current.children, true);
       
-      console.log('🖱️ [QRScannerWebRTC] Intersects:', intersects.length);
+      console.log('🖱️ [QRScannerWebRTC] Intersects:', intersects.length, 'at', clientX, clientY);
       
       if (intersects.length > 0) {
         let clickableObject = intersects[0].object;
@@ -1047,12 +1071,15 @@ function QRScannerWebRTC({ onScan, onClose }) {
     const canvas = arCanvasRef.current;
     
     // 클릭 및 터치 이벤트 모두 처리 (모바일 지원)
+    // 모바일에서는 touchstart와 touchend 모두 처리
     canvas.addEventListener('click', handleClick);
-    canvas.addEventListener('touchend', handleClick); // 모바일 터치 지원
+    canvas.addEventListener('touchstart', handleClick, { passive: false }); // passive: false로 preventDefault 허용
+    canvas.addEventListener('touchend', handleClick, { passive: false });
     console.log('🖱️ [QRScannerWebRTC] Click and touch listeners added in useEffect');
 
     return () => {
       canvas.removeEventListener('click', handleClick);
+      canvas.removeEventListener('touchstart', handleClick);
       canvas.removeEventListener('touchend', handleClick);
       console.log('🖱️ [QRScannerWebRTC] Click and touch listeners removed');
     };
