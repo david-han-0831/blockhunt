@@ -520,9 +520,11 @@ function QRScannerWebRTC({ onScan, onClose }) {
           console.log('✅ [QRScannerWebRTC] QR Code scanned:', decodedText);
           console.log('📍 [QRScannerWebRTC] QR Code result:', result);
           
-          setIsScanning(false);
+          // QR 스캔 후에도 카메라는 계속 유지 (블록 표시를 위해)
+          // setIsScanning(false); // 제거: 카메라를 계속 유지해야 블록이 표시됨
           setScannedData(decodedText);
           setQrScanned(true);  // AR 애니메이션 상태 변경
+          qrScannedRef.current = true; // ref도 업데이트
           
           // QR 데이터 파싱하여 블록 ID 추출
           let blockId = null;
@@ -536,7 +538,38 @@ function QRScannerWebRTC({ onScan, onClose }) {
           }
           
           // QR 코드 스캔 시 화면 중앙에 실제 블록 GLTF 모델 표시
-          if (sceneRef.current && cameraRef.current && blockId) {
+          // Three.js가 초기화되어 있는지 확인하고 블록 로드
+          const loadBlockModel = () => {
+            if (!sceneRef.current || !cameraRef.current || !rendererRef.current) {
+              console.warn('⚠️ [QRScannerWebRTC] Three.js not initialized yet, retrying...');
+              // Three.js 초기화를 기다림 (최대 2초)
+              let retryCount = 0;
+              const maxRetries = 20;
+              const retryInterval = setInterval(() => {
+                retryCount++;
+                if (sceneRef.current && cameraRef.current && rendererRef.current && blockId) {
+                  clearInterval(retryInterval);
+                  loadBlockModelInternal(blockId);
+                } else if (retryCount >= maxRetries) {
+                  clearInterval(retryInterval);
+                  console.error('❌ [QRScannerWebRTC] Three.js initialization timeout');
+                }
+              }, 100);
+              return;
+            }
+            
+            if (blockId) {
+              loadBlockModelInternal(blockId);
+            }
+          };
+          
+          // 실제 블록 로드 함수
+          const loadBlockModelInternal = (blockIdToLoad) => {
+            if (!sceneRef.current || !cameraRef.current) {
+              console.error('❌ [QRScannerWebRTC] Scene or camera not available');
+              return;
+            }
+            
             // 기존 블록들 제거
             const existingBlocks = sceneRef.current.children.filter(
               child => child.userData.isQRBlock === true
@@ -556,21 +589,21 @@ function QRScannerWebRTC({ onScan, onClose }) {
             });
             
             // 실제 블록 GLTF 모델 로드
-            const gltfPath = getBlockGLTFPath(blockId);
+            const gltfPath = getBlockGLTFPath(blockIdToLoad);
             const loader = new GLTFLoader();
             
-            console.log(`📦 [QRScannerWebRTC] Loading ${blockId}.gltf from ${gltfPath}...`);
+            console.log(`📦 [QRScannerWebRTC] Loading ${blockIdToLoad}.gltf from ${gltfPath}...`);
             loader.load(
               gltfPath,
               (gltf) => {
-                console.log(`✅ [QRScannerWebRTC] ${blockId}.gltf loaded successfully`);
+                console.log(`✅ [QRScannerWebRTC] ${blockIdToLoad}.gltf loaded successfully`);
                 const model = gltf.scene.clone(); // 클론하여 사용
                 
                 // userData 설정
                 model.userData = {
                   clickable: true,
                   isQRBlock: true,
-                  blockId: blockId
+                  blockId: blockIdToLoad
                 };
                 
                 // 머티리얼 설정 (C4D Export 호환성)
@@ -591,12 +624,12 @@ function QRScannerWebRTC({ onScan, onClose }) {
                 });
                 
                 // 블록별 설정 적용 (크기, 위치, 회전, 자동 중앙 정렬)
-                applyBlockDisplayConfig(model, blockId);
+                applyBlockDisplayConfig(model, blockIdToLoad);
                 
                 sceneRef.current.add(model);
                 blocksRef.current = [model];
                 
-                console.log(`✅ [QRScannerWebRTC] ${blockId}.gltf model added to scene`);
+                console.log(`✅ [QRScannerWebRTC] ${blockIdToLoad}.gltf model added to scene`);
               },
               (progress) => {
                 if (progress.total > 0) {
@@ -605,29 +638,34 @@ function QRScannerWebRTC({ onScan, onClose }) {
                 }
               },
               (error) => {
-                console.error(`❌ [QRScannerWebRTC] Error loading ${blockId}.gltf:`, error);
+                console.error(`❌ [QRScannerWebRTC] Error loading ${blockIdToLoad}.gltf:`, error);
                 // 에러 발생 시 기본 블록 생성
-                const geometry = new THREE.BoxGeometry(0.3, 0.3, 0.3);
-                const material = new THREE.MeshBasicMaterial({ 
-                  color: 0x5CA65C,
-                  transparent: true,
-                  opacity: 0.9,
-                  side: THREE.DoubleSide
-                });
-                const fallbackBlock = new THREE.Mesh(geometry, material);
-                fallbackBlock.position.set(0, 0.2, -1);
-                fallbackBlock.scale.set(2.5, 2.5, 2.5);
-                fallbackBlock.userData = {
-                  clickable: true,
-                  isQRBlock: true,
-                  blockId: blockId
-                };
-                sceneRef.current.add(fallbackBlock);
-                blocksRef.current = [fallbackBlock];
-                console.log('✅ [QRScannerWebRTC] Fallback block created');
+                if (sceneRef.current && cameraRef.current) {
+                  const geometry = new THREE.BoxGeometry(0.3, 0.3, 0.3);
+                  const material = new THREE.MeshBasicMaterial({ 
+                    color: 0x5CA65C,
+                    transparent: true,
+                    opacity: 0.9,
+                    side: THREE.DoubleSide
+                  });
+                  const fallbackBlock = new THREE.Mesh(geometry, material);
+                  fallbackBlock.position.set(0, 0.2, -1);
+                  fallbackBlock.scale.set(2.5, 2.5, 2.5);
+                  fallbackBlock.userData = {
+                    clickable: true,
+                    isQRBlock: true,
+                    blockId: blockIdToLoad
+                  };
+                  sceneRef.current.add(fallbackBlock);
+                  blocksRef.current = [fallbackBlock];
+                  console.log('✅ [QRScannerWebRTC] Fallback block created');
+                }
               }
             );
-          }
+          };
+          
+          // 블록 로드 시작
+          loadBlockModel();
           
           // 모달은 블록 클릭 시에만 표시하도록 변경 (여기서는 표시하지 않음)
           // onScan은 블록 클릭 시 호출하도록 변경
@@ -737,7 +775,11 @@ function QRScannerWebRTC({ onScan, onClose }) {
   useEffect(() => {
     if (!isScanning) {
       // isScanning이 false가 되면 cleanup
-      cleanupThreeJS();
+      // 단, QR 스캔 후 블록이 표시되는 동안에는 cleanup하지 않음
+      // (qrScanned 상태로 확인)
+      if (!qrScanned) {
+        cleanupThreeJS();
+      }
       return;
     }
     
@@ -947,7 +989,7 @@ function QRScannerWebRTC({ onScan, onClose }) {
       const timer = setTimeout(tryInit, 500);
       return () => clearTimeout(timer);
     }
-  }, [isScanning, initThreeJS, cleanupThreeJS]);
+  }, [isScanning, qrScanned, initThreeJS, cleanupThreeJS]);
 
   // qrScanned 상태 변경 시 애니메이션 업데이트
   useEffect(() => {
@@ -956,7 +998,8 @@ function QRScannerWebRTC({ onScan, onClose }) {
 
   // 클릭 이벤트 리스너 관리 (별도 useEffect로 분리)
   useEffect(() => {
-    if (!isScanning || !arCanvasRef.current || !raycasterRef.current || !cameraRef.current || !sceneRef.current) {
+    // QR 스캔 후에도 클릭 가능하도록 isScanning 또는 qrScanned 조건 추가
+    if ((!isScanning && !qrScanned) || !arCanvasRef.current || !raycasterRef.current || !cameraRef.current || !sceneRef.current) {
       return;
     }
 
@@ -1002,14 +1045,18 @@ function QRScannerWebRTC({ onScan, onClose }) {
     };
 
     const canvas = arCanvasRef.current;
+    
+    // 클릭 및 터치 이벤트 모두 처리 (모바일 지원)
     canvas.addEventListener('click', handleClick);
-    console.log('🖱️ [QRScannerWebRTC] Click listener added in useEffect');
+    canvas.addEventListener('touchend', handleClick); // 모바일 터치 지원
+    console.log('🖱️ [QRScannerWebRTC] Click and touch listeners added in useEffect');
 
     return () => {
       canvas.removeEventListener('click', handleClick);
-      console.log('🖱️ [QRScannerWebRTC] Click listener removed');
+      canvas.removeEventListener('touchend', handleClick);
+      console.log('🖱️ [QRScannerWebRTC] Click and touch listeners removed');
     };
-  }, [isScanning]);
+  }, [isScanning, qrScanned, scannedData, onScan]);
 
   // 컴포넌트 마운트 시 초기화
   useEffect(() => {
@@ -1356,7 +1403,7 @@ function QRScannerWebRTC({ onScan, onClose }) {
               <div className="modal-header bg-success text-white">
                 <h5 className="modal-title">
                   <i className="bi bi-check-circle-fill me-2"></i>
-                  QR Code Scan Successful!
+                  Block Collected Successfully!
                 </h5>
               </div>
               <div className="modal-body text-center">
