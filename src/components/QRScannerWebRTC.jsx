@@ -1753,11 +1753,11 @@ function QRScannerWebRTC({ onScan, onClose }) {
                     return (
                       <>
                         <h4 className="mb-3 fw-bold text-success">
-                          Block Collected Successfully! 🎉
+                          Block Collected Successfully!
                         </h4>
                         <div className="alert alert-success border-0" style={{ backgroundColor: '#d4edda' }}>
                           <div className="d-flex align-items-center justify-content-center gap-2">
-                            <i className="bi bi-puzzle-fill" style={{ fontSize: '1.5rem' }}></i>
+                            
                             <div>
                               <div className="fw-bold">{blockName}</div>
                               <div className="small text-muted mt-1">
