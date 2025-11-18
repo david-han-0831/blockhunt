@@ -1,6 +1,6 @@
 {
   "controls_if": {
-    "scale": 20,
+    "scale": 10,
     "position": {
       "x": 0,
       "y": 0,
@@ -19,7 +19,7 @@
     "autoCenter": true
   },
   "controls_flow_statements": {
-    "scale": 20,
+    "scale": 10,
     "position": {
       "x": 0,
       "y": 0,
@@ -38,7 +38,7 @@
     "autoCenter": true
   },
   "lists_repeat": {
-    "scale": 12,
+    "scale": 6,
     "position": {
       "x": 0,
       "y": 0,
@@ -57,7 +57,7 @@
     "autoCenter": true
   },
   "controls_for": {
-    "scale": 20,
+    "scale": 10,
     "position": {
       "x": 0,
       "y": 0,
@@ -76,405 +76,6 @@
     "autoCenter": true
   },
   "controls_forEach": {
-    "scale": 24,
-    "position": {
-      "x": 0,
-      "y": 0,
-      "z": -1.5
-    },
-    "rotation": {
-      "x": 0,
-      "y": 0,
-      "z": 0
-    },
-    "centerOffset": {
-      "x": 0,
-      "y": 0,
-      "z": 0
-    },
-    "autoCenter": true
-  },
-  "controls_repeat_ext": {
-    "scale": 28,
-    "position": {
-      "x": 0,
-      "y": 0,
-      "z": -1.5
-    },
-    "rotation": {
-      "x": 0,
-      "y": 0,
-      "z": 0
-    },
-    "centerOffset": {
-      "x": 0,
-      "y": 0,
-      "z": 0
-    },
-    "autoCenter": true
-  },
-  "controls_whileUntil": {
-    "scale": 28,
-    "position": {
-      "x": 0,
-      "y": 0,
-      "z": -1.5
-    },
-    "rotation": {
-      "x": 0,
-      "y": 0,
-      "z": 0
-    },
-    "centerOffset": {
-      "x": 0,
-      "y": 0,
-      "z": 0
-    },
-    "autoCenter": true
-  },
-  "text": {
-    "scale": 20,
-    "position": {
-      "x": 0,
-      "y": 0,
-      "z": -1.5
-    },
-    "rotation": {
-      "x": 0,
-      "y": 0,
-      "z": 0
-    },
-    "centerOffset": {
-      "x": 0,
-      "y": 0,
-      "z": 0
-    },
-    "autoCenter": true
-  },
-  "text_append": {
-    "scale": 20,
-    "position": {
-      "x": 0,
-      "y": 0,
-      "z": -1.5
-    },
-    "rotation": {
-      "x": 0,
-      "y": 0,
-      "z": 0
-    },
-    "centerOffset": {
-      "x": 0,
-      "y": 0,
-      "z": 0
-    },
-    "autoCenter": true
-  },
-  "text_join": {
-    "scale": 20,
-    "position": {
-      "x": 0,
-      "y": 0,
-      "z": -1.5
-    },
-    "rotation": {
-      "x": 0,
-      "y": 0,
-      "z": 0
-    },
-    "centerOffset": {
-      "x": 0,
-      "y": 0,
-      "z": 0
-    },
-    "autoCenter": true
-  },
-  "text_length": {
-    "scale": 20,
-    "position": {
-      "x": 0,
-      "y": 0,
-      "z": -1.5
-    },
-    "rotation": {
-      "x": 0,
-      "y": 0,
-      "z": 0
-    },
-    "centerOffset": {
-      "x": 0,
-      "y": 0,
-      "z": 0
-    },
-    "autoCenter": true
-  },
-  "text_print": {
-    "scale": 28,
-    "position": {
-      "x": 0,
-      "y": 0,
-      "z": -1.5
-    },
-    "rotation": {
-      "x": 0,
-      "y": 0,
-      "z": 0
-    },
-    "centerOffset": {
-      "x": 0,
-      "y": 0,
-      "z": 0
-    },
-    "autoCenter": true
-  },
-  "logic_negate": {
-    "scale": 24,
-    "position": {
-      "x": 0,
-      "y": 0,
-      "z": -1.5
-    },
-    "rotation": {
-      "x": 0,
-      "y": 0,
-      "z": 0
-    },
-    "centerOffset": {
-      "x": 0,
-      "y": 0,
-      "z": 0
-    },
-    "autoCenter": true
-  },
-  "logic_operation": {
-    "scale": 20,
-    "position": {
-      "x": 0,
-      "y": 0,
-      "z": -1.5
-    },
-    "rotation": {
-      "x": 0,
-      "y": 0,
-      "z": 0
-    },
-    "centerOffset": {
-      "x": 0,
-      "y": 0,
-      "z": 0
-    },
-    "autoCenter": true
-  },
-  "logic_compare": {
-    "scale": 20,
-    "position": {
-      "x": 0,
-      "y": 0,
-      "z": -1.5
-    },
-    "rotation": {
-      "x": 0,
-      "y": 0,
-      "z": 0
-    },
-    "centerOffset": {
-      "x": 0,
-      "y": 0,
-      "z": 0
-    },
-    "autoCenter": true
-  },
-  "logic_boolean": {
-    "scale": 24,
-    "position": {
-      "x": 0,
-      "y": 0,
-      "z": -1.5
-    },
-    "rotation": {
-      "x": 0,
-      "y": 0,
-      "z": 0
-    },
-    "centerOffset": {
-      "x": 0,
-      "y": 0,
-      "z": 0
-    },
-    "autoCenter": true
-  },
-  "math_arithmetic": {
-    "scale": 20,
-    "position": {
-      "x": 0,
-      "y": 0,
-      "z": -1.5
-    },
-    "rotation": {
-      "x": 0,
-      "y": 0,
-      "z": 0
-    },
-    "centerOffset": {
-      "x": 0,
-      "y": 0,
-      "z": 0
-    },
-    "autoCenter": true
-  },
-  "math_constant": {
-    "scale": 24,
-    "position": {
-      "x": 0,
-      "y": 0,
-      "z": -1.5
-    },
-    "rotation": {
-      "x": 0,
-      "y": 0,
-      "z": 0
-    },
-    "centerOffset": {
-      "x": 0,
-      "y": 0,
-      "z": 0
-    },
-    "autoCenter": true
-  },
-  "math_modulo": {
-    "scale": 20,
-    "position": {
-      "x": 0,
-      "y": 0,
-      "z": -1.5
-    },
-    "rotation": {
-      "x": 0,
-      "y": 0,
-      "z": 0
-    },
-    "centerOffset": {
-      "x": 0,
-      "y": 0,
-      "z": 0
-    },
-    "autoCenter": true
-  },
-  "math_number": {
-    "scale": 24,
-    "position": {
-      "x": 0,
-      "y": 0,
-      "z": -1.5
-    },
-    "rotation": {
-      "x": 0,
-      "y": 0,
-      "z": 0
-    },
-    "centerOffset": {
-      "x": 0,
-      "y": 0,
-      "z": 0
-    },
-    "autoCenter": true
-  },
-  "math_single": {
-    "scale": 20,
-    "position": {
-      "x": 0,
-      "y": 0,
-      "z": -1.5
-    },
-    "rotation": {
-      "x": 0,
-      "y": 0,
-      "z": 0
-    },
-    "centerOffset": {
-      "x": 0,
-      "y": 0,
-      "z": 0
-    },
-    "autoCenter": true
-  },
-  "math_trig": {
-    "scale": 20,
-    "position": {
-      "x": 0,
-      "y": 0,
-      "z": -1.5
-    },
-    "rotation": {
-      "x": 0,
-      "y": 0,
-      "z": 0
-    },
-    "centerOffset": {
-      "x": 0,
-      "y": 0,
-      "z": 0
-    },
-    "autoCenter": true
-  },
-  "lists_create_empty": {
-    "scale": 20,
-    "position": {
-      "x": 0,
-      "y": 0,
-      "z": -1.5
-    },
-    "rotation": {
-      "x": 0,
-      "y": 0,
-      "z": 0
-    },
-    "centerOffset": {
-      "x": 0,
-      "y": 0,
-      "z": 0
-    },
-    "autoCenter": true
-  },
-  "lists_create_with": {
-    "scale": 28,
-    "position": {
-      "x": 0,
-      "y": 0,
-      "z": -1.5
-    },
-    "rotation": {
-      "x": 0,
-      "y": 0,
-      "z": 0
-    },
-    "centerOffset": {
-      "x": 0,
-      "y": 0,
-      "z": 0
-    },
-    "autoCenter": true
-  },
-  "lists_getIndex": {
-    "scale": 16,
-    "position": {
-      "x": 0,
-      "y": 0,
-      "z": -1.5
-    },
-    "rotation": {
-      "x": 0,
-      "y": 0,
-      "z": 0
-    },
-    "centerOffset": {
-      "x": 0,
-      "y": 0,
-      "z": 0
-    },
-    "autoCenter": true
-  },
-  "lists_indexOf": {
     "scale": 12,
     "position": {
       "x": 0,
@@ -493,8 +94,407 @@
     },
     "autoCenter": true
   },
+  "controls_repeat_ext": {
+    "scale": 14,
+    "position": {
+      "x": 0,
+      "y": 0,
+      "z": -1.5
+    },
+    "rotation": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "centerOffset": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "autoCenter": true
+  },
+  "controls_whileUntil": {
+    "scale": 14,
+    "position": {
+      "x": 0,
+      "y": 0,
+      "z": -1.5
+    },
+    "rotation": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "centerOffset": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "autoCenter": true
+  },
+  "text": {
+    "scale": 10,
+    "position": {
+      "x": 0,
+      "y": 0,
+      "z": -1.5
+    },
+    "rotation": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "centerOffset": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "autoCenter": true
+  },
+  "text_append": {
+    "scale": 10,
+    "position": {
+      "x": 0,
+      "y": 0,
+      "z": -1.5
+    },
+    "rotation": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "centerOffset": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "autoCenter": true
+  },
+  "text_join": {
+    "scale": 10,
+    "position": {
+      "x": 0,
+      "y": 0,
+      "z": -1.5
+    },
+    "rotation": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "centerOffset": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "autoCenter": true
+  },
+  "text_length": {
+    "scale": 10,
+    "position": {
+      "x": 0,
+      "y": 0,
+      "z": -1.5
+    },
+    "rotation": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "centerOffset": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "autoCenter": true
+  },
+  "text_print": {
+    "scale": 14,
+    "position": {
+      "x": 0,
+      "y": 0,
+      "z": -1.5
+    },
+    "rotation": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "centerOffset": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "autoCenter": true
+  },
+  "logic_negate": {
+    "scale": 12,
+    "position": {
+      "x": 0,
+      "y": 0,
+      "z": -1.5
+    },
+    "rotation": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "centerOffset": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "autoCenter": true
+  },
+  "logic_operation": {
+    "scale": 10,
+    "position": {
+      "x": 0,
+      "y": 0,
+      "z": -1.5
+    },
+    "rotation": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "centerOffset": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "autoCenter": true
+  },
+  "logic_compare": {
+    "scale": 10,
+    "position": {
+      "x": 0,
+      "y": 0,
+      "z": -1.5
+    },
+    "rotation": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "centerOffset": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "autoCenter": true
+  },
+  "logic_boolean": {
+    "scale": 12,
+    "position": {
+      "x": 0,
+      "y": 0,
+      "z": -1.5
+    },
+    "rotation": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "centerOffset": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "autoCenter": true
+  },
+  "math_arithmetic": {
+    "scale": 10,
+    "position": {
+      "x": 0,
+      "y": 0,
+      "z": -1.5
+    },
+    "rotation": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "centerOffset": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "autoCenter": true
+  },
+  "math_constant": {
+    "scale": 12,
+    "position": {
+      "x": 0,
+      "y": 0,
+      "z": -1.5
+    },
+    "rotation": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "centerOffset": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "autoCenter": true
+  },
+  "math_modulo": {
+    "scale": 10,
+    "position": {
+      "x": 0,
+      "y": 0,
+      "z": -1.5
+    },
+    "rotation": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "centerOffset": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "autoCenter": true
+  },
+  "math_number": {
+    "scale": 12,
+    "position": {
+      "x": 0,
+      "y": 0,
+      "z": -1.5
+    },
+    "rotation": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "centerOffset": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "autoCenter": true
+  },
+  "math_single": {
+    "scale": 10,
+    "position": {
+      "x": 0,
+      "y": 0,
+      "z": -1.5
+    },
+    "rotation": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "centerOffset": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "autoCenter": true
+  },
+  "math_trig": {
+    "scale": 10,
+    "position": {
+      "x": 0,
+      "y": 0,
+      "z": -1.5
+    },
+    "rotation": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "centerOffset": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "autoCenter": true
+  },
+  "lists_create_empty": {
+    "scale": 10,
+    "position": {
+      "x": 0,
+      "y": 0,
+      "z": -1.5
+    },
+    "rotation": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "centerOffset": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "autoCenter": true
+  },
+  "lists_create_with": {
+    "scale": 14,
+    "position": {
+      "x": 0,
+      "y": 0,
+      "z": -1.5
+    },
+    "rotation": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "centerOffset": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "autoCenter": true
+  },
+  "lists_getIndex": {
+    "scale": 8,
+    "position": {
+      "x": 0,
+      "y": 0,
+      "z": -1.5
+    },
+    "rotation": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "centerOffset": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "autoCenter": true
+  },
+  "lists_indexOf": {
+    "scale": 6,
+    "position": {
+      "x": 0,
+      "y": 0,
+      "z": -1.5
+    },
+    "rotation": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "centerOffset": {
+      "x": 0,
+      "y": 0,
+      "z": 0
+    },
+    "autoCenter": true
+  },
   "lists_isEmpty": {
-    "scale": 20,
+    "scale": 10,
     "position": {
       "x": 0,
       "y": 0,
@@ -513,7 +513,7 @@
     "autoCenter": true
   },
   "lists_length": {
-    "scale": 20,
+    "scale": 10,
     "position": {
       "x": 0,
       "y": 0,

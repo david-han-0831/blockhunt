@@ -10,7 +10,8 @@ import {
   query,
   where,
   orderBy,
-  arrayUnion
+  arrayUnion,
+  limit
 } from 'firebase/firestore';
 import { db } from './firebaseConfig';
 
@@ -47,10 +48,11 @@ export const getUserProfile = async (uid) => {
 // 이메일과 유저 이름으로 사용자 찾기
 export const findUserByEmailAndUsername = async (email, username) => {
   try {
-    // 이메일로 먼저 확인
+    // 이메일로 먼저 확인 (보안: limit 10으로 제한)
     const emailQuery = query(
       collection(db, 'users'),
-      where('email', '==', email.toLowerCase().trim())
+      where('email', '==', email.toLowerCase().trim()),
+      limit(10)
     );
     const emailSnapshot = await getDocs(emailQuery);
     
