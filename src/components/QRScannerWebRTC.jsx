@@ -40,6 +40,8 @@ function QRScannerWebRTC({ onScan, onClose }) {
   const [currentCameraIndex, setCurrentCameraIndex] = useState(0);
   const [isSwitchingCamera, setIsSwitchingCamera] = useState(false);
   const [qrScanned, setQrScanned] = useState(false);
+  const [debugInfo, setDebugInfo] = useState(null); // 디버깅 정보 상태
+  const [showDebugPanel, setShowDebugPanel] = useState(false); // 디버그 패널 표시 여부
 
   // 카메라 스트림 정리
   const stopCamera = useCallback(() => {
@@ -553,6 +555,15 @@ function QRScannerWebRTC({ onScan, onClose }) {
             blockId = qrPayload.block;
             console.log('📦 [QRScannerWebRTC] Extracted blockId:', blockId, `(type: ${typeof blockId})`);
             
+            // 디버깅 정보 업데이트
+            setDebugInfo(prev => ({
+              ...prev,
+              qrData: decodedText,
+              parsedPayload: qrPayload,
+              extractedBlockId: blockId,
+              blockIdType: typeof blockId
+            }));
+            
             if (!blockId) {
               console.error('❌ [QRScannerWebRTC] blockId is null or undefined in QR payload');
             }
@@ -662,7 +673,7 @@ function QRScannerWebRTC({ onScan, onClose }) {
                 });
                 
                 // 블록별 설정 적용 (크기, 위치, 회전, 자동 중앙 정렬)
-                applyBlockDisplayConfig(model, blockIdToLoad);
+                applyBlockDisplayConfig(model, blockIdToLoad, setDebugInfo);
                 
                 // 블록의 bounding box 계산 및 로그 출력
                 const box = new THREE.Box3().setFromObject(model);
@@ -676,6 +687,18 @@ function QRScannerWebRTC({ onScan, onClose }) {
                   position: { x: model.position.x, y: model.position.y, z: model.position.z }
                 });
                 
+                // 디버깅 정보 업데이트 (모델 정보)
+                setDebugInfo(prev => ({
+                  ...prev,
+                  modelInfo: {
+                    blockId: blockIdToLoad,
+                    scale: { x: model.scale.x, y: model.scale.y, z: model.scale.z },
+                    baseScale: model.userData.baseScale,
+                    boundingBoxSize: { x: size.x, y: size.y, z: size.z },
+                    position: { x: model.position.x, y: model.position.y, z: model.position.z }
+                  }
+                }));
+                
                 sceneRef.current.add(model);
                 blocksRef.current = [model];
                 
@@ -686,6 +709,15 @@ function QRScannerWebRTC({ onScan, onClose }) {
                   modelScale: { x: model.scale.x, y: model.scale.y, z: model.scale.z },
                   boundingBoxSize: { x: sizeAfterAdd.x, y: sizeAfterAdd.y, z: sizeAfterAdd.z }
                 });
+                
+                // 최종 디버깅 정보 업데이트
+                setDebugInfo(prev => ({
+                  ...prev,
+                  finalModelInfo: {
+                    scale: { x: model.scale.x, y: model.scale.y, z: model.scale.z },
+                    boundingBoxSize: { x: sizeAfterAdd.x, y: sizeAfterAdd.y, z: sizeAfterAdd.z }
+                  }
+                }));
               },
               (progress) => {
                 if (progress.total > 0) {
@@ -1518,6 +1550,104 @@ function QRScannerWebRTC({ onScan, onClose }) {
                         }}
                       >
                         Scan a QR code to discover blocks
+                      </div>
+                    )}
+                    
+                    {/* 디버그 패널 토글 버튼 */}
+                    {(qrScanned || debugInfo) && (
+                      <button
+                        onClick={() => setShowDebugPanel(!showDebugPanel)}
+                        style={{
+                          position: 'absolute',
+                          top: '10px',
+                          right: '10px',
+                          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '4px',
+                          padding: '8px 12px',
+                          fontSize: '12px',
+                          zIndex: 2000,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {showDebugPanel ? 'Hide Debug' : 'Show Debug'}
+                      </button>
+                    )}
+                    
+                    {/* 디버그 정보 패널 */}
+                    {showDebugPanel && debugInfo && (
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: '50px',
+                          right: '10px',
+                          backgroundColor: 'rgba(0, 0, 0, 0.85)',
+                          color: 'white',
+                          padding: '12px',
+                          borderRadius: '8px',
+                          fontSize: '11px',
+                          fontFamily: 'monospace',
+                          zIndex: 2000,
+                          maxWidth: '300px',
+                          maxHeight: '400px',
+                          overflow: 'auto',
+                          lineHeight: '1.4'
+                        }}
+                      >
+                        <div style={{ fontWeight: 'bold', marginBottom: '8px', borderBottom: '1px solid rgba(255,255,255,0.3)', paddingBottom: '4px' }}>
+                          🔍 Debug Info
+                        </div>
+                        
+                        {/* QR 데이터 정보 */}
+                        {debugInfo.extractedBlockId && (
+                          <div style={{ marginBottom: '8px' }}>
+                            <div style={{ color: '#4CAF50', fontWeight: 'bold' }}>QR Block ID:</div>
+                            <div>{debugInfo.extractedBlockId} ({debugInfo.blockIdType})</div>
+                          </div>
+                        )}
+                        
+                        {/* 설정 정보 */}
+                        {debugInfo.configInfo && (
+                          <div style={{ marginBottom: '8px' }}>
+                            <div style={{ color: debugInfo.configInfo.found ? '#4CAF50' : '#FF9800', fontWeight: 'bold' }}>
+                              Config: {debugInfo.configInfo.found ? '✅ Found' : '⚠️ Not Found'}
+                            </div>
+                            {debugInfo.configInfo.found && debugInfo.configInfo.config && (
+                              <div>
+                                <div>Scale: {debugInfo.configInfo.config.scale} (type: {typeof debugInfo.configInfo.config.scale})</div>
+                                <div>Position: ({debugInfo.configInfo.config.position?.x}, {debugInfo.configInfo.config.position?.y}, {debugInfo.configInfo.config.position?.z})</div>
+                                <div>AutoCenter: {debugInfo.configInfo.config.autoCenter ? 'Yes' : 'No'}</div>
+                              </div>
+                            )}
+                            {!debugInfo.configInfo.found && (
+                              <div style={{ fontSize: '10px', color: '#FF9800' }}>
+                                Available: {debugInfo.configInfo.availableKeys?.slice(0, 3).join(', ')}...
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        
+                        {/* 모델 정보 */}
+                        {debugInfo.modelInfo && (
+                          <div style={{ marginBottom: '8px' }}>
+                            <div style={{ color: '#2196F3', fontWeight: 'bold' }}>Model Scale:</div>
+                            <div>X: {debugInfo.modelInfo.scale?.x?.toFixed(2)}</div>
+                            <div>Y: {debugInfo.modelInfo.scale?.y?.toFixed(2)}</div>
+                            <div>Z: {debugInfo.modelInfo.scale?.z?.toFixed(2)}</div>
+                            {debugInfo.modelInfo.baseScale && (
+                              <div style={{ color: '#4CAF50' }}>Base: {debugInfo.modelInfo.baseScale}</div>
+                            )}
+                          </div>
+                        )}
+                        
+                        {/* 최종 모델 정보 */}
+                        {debugInfo.finalModelInfo && (
+                          <div style={{ marginBottom: '8px' }}>
+                            <div style={{ color: '#9C27B0', fontWeight: 'bold' }}>Final Bounding Box:</div>
+                            <div>Size: ({debugInfo.finalModelInfo.boundingBoxSize?.x?.toFixed(2)}, {debugInfo.finalModelInfo.boundingBoxSize?.y?.toFixed(2)}, {debugInfo.finalModelInfo.boundingBoxSize?.z?.toFixed(2)})</div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

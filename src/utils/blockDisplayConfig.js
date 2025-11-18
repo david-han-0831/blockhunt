@@ -40,7 +40,10 @@ export const getBlockGLTFPath = (blockId) => {
  * @param {string} blockId - 블록 ID
  * @returns {Object} 블록 표시 설정
  */
-export const getBlockDisplayConfig = (blockId) => {
+// 디버깅 정보를 저장할 전역 변수 (화면 표시용)
+let debugConfigInfo = null;
+
+export const getBlockDisplayConfig = (blockId, setDebugInfoCallback = null) => {
   console.log(`🔍 [blockDisplayConfig] Getting config for blockId: "${blockId}"`);
   console.log(`🔍 [blockDisplayConfig] Available keys in config:`, Object.keys(blockDisplayConfigs));
   
@@ -49,6 +52,15 @@ export const getBlockDisplayConfig = (blockId) => {
   if (!config) {
     console.warn(`⚠️ [blockDisplayConfig] No config found for block: "${blockId}", using defaults`);
     console.warn(`⚠️ [blockDisplayConfig] Available block IDs:`, Object.keys(blockDisplayConfigs));
+    debugConfigInfo = {
+      blockId,
+      found: false,
+      availableKeys: Object.keys(blockDisplayConfigs),
+      config: DEFAULT_CONFIG
+    };
+    if (setDebugInfoCallback) {
+      setDebugInfoCallback(prev => ({ ...prev, configInfo: debugConfigInfo }));
+    }
     return DEFAULT_CONFIG;
   }
   
@@ -59,6 +71,17 @@ export const getBlockDisplayConfig = (blockId) => {
     rotation: { ...DEFAULT_CONFIG.rotation, ...(config.rotation || {}) },
     centerOffset: { ...DEFAULT_CONFIG.centerOffset, ...(config.centerOffset || {}) }
   };
+  
+  debugConfigInfo = {
+    blockId,
+    found: true,
+    config: finalConfig,
+    rawConfig: config
+  };
+  
+  if (setDebugInfoCallback) {
+    setDebugInfoCallback(prev => ({ ...prev, configInfo: debugConfigInfo }));
+  }
   
   console.log(`✅ [blockDisplayConfig] Config loaded for "${blockId}":`, {
     scale: finalConfig.scale,
@@ -75,8 +98,8 @@ export const getBlockDisplayConfig = (blockId) => {
  * @param {THREE.Object3D} model - Three.js 모델 객체
  * @param {string} blockId - 블록 ID
  */
-export const applyBlockDisplayConfig = (model, blockId) => {
-  const config = getBlockDisplayConfig(blockId);
+export const applyBlockDisplayConfig = (model, blockId, setDebugInfoCallback = null) => {
+  const config = getBlockDisplayConfig(blockId, setDebugInfoCallback);
   
   console.log(`🎨 [blockDisplayConfig] Applying config to model for "${blockId}":`, {
     scale: config.scale,
