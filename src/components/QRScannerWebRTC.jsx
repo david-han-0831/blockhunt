@@ -521,11 +521,26 @@ function QRScannerWebRTC({ onScan, onClose }) {
           console.log('✅ [QRScannerWebRTC] QR Code scanned:', decodedText);
           console.log('📍 [QRScannerWebRTC] QR Code result:', result);
           
-          // QR 스캔 후에도 카메라는 계속 유지 (블록 표시를 위해)
-          // setIsScanning(false); // 제거: 카메라를 계속 유지해야 블록이 표시됨
+          // 이미 스캔 완료된 경우 중복 처리 방지
+          if (qrScannedRef.current) {
+            console.log('⚠️ [QRScannerWebRTC] QR already scanned, ignoring duplicate scan');
+            return;
+          }
+          
+          // QR 스캔 완료 플래그 설정
           setScannedData(decodedText);
           setQrScanned(true);  // AR 애니메이션 상태 변경
           qrScannedRef.current = true; // ref도 업데이트
+          
+          // QR 스캔 완료 후 스캐너 중지 (카메라는 유지하되 스캔은 중지)
+          try {
+            if (qrCodeRef.current) {
+              await qrCodeRef.current.stop();
+              console.log('🛑 [QRScannerWebRTC] QR scanner stopped after successful scan');
+            }
+          } catch (err) {
+            console.warn('⚠️ [QRScannerWebRTC] Error stopping QR scanner:', err);
+          }
           
           // QR 데이터 파싱하여 블록 ID 추출
           let blockId = null;
@@ -571,11 +586,21 @@ function QRScannerWebRTC({ onScan, onClose }) {
               return;
             }
             
-            // 기존 블록들 제거
+            // 이미 블록이 로드되어 있는지 확인 (중복 로드 방지)
             const existingBlocks = sceneRef.current.children.filter(
-              child => child.userData.isQRBlock === true
+              child => child.userData.isQRBlock === true && child.userData.blockId === blockIdToLoad
             );
-            existingBlocks.forEach(block => {
+            
+            if (existingBlocks.length > 0) {
+              console.log('⚠️ [QRScannerWebRTC] Block already loaded, skipping duplicate load:', blockIdToLoad);
+              return;
+            }
+            
+            // 다른 블록들 제거 (같은 블록이 아닌 경우)
+            const otherBlocks = sceneRef.current.children.filter(
+              child => child.userData.isQRBlock === true && child.userData.blockId !== blockIdToLoad
+            );
+            otherBlocks.forEach(block => {
               sceneRef.current.remove(block);
               block.traverse((child) => {
                 if (child.geometry) child.geometry.dispose();
@@ -1386,14 +1411,14 @@ function QRScannerWebRTC({ onScan, onClose }) {
                 </div>
               ) : (
                 <>
-                  {/* QR 스캐너 컨테이너 */}
+                  {/* QR 스캐너 컨테이너 - QR 스캔 완료 시 카메라 영역 숨김 */}
                   <div 
                     id="qr-reader-webrtc"
                     className="mb-3"
                     style={{ 
                       minHeight: '300px',
-                      backgroundColor: '#f8f9fa',
-                      border: '2px dashed #dee2e6',
+                      backgroundColor: qrScanned ? 'transparent' : '#f8f9fa',
+                      border: qrScanned ? 'none' : '2px dashed #dee2e6',
                       borderRadius: '8px',
                       display: 'flex',
                       alignItems: 'center',
@@ -1418,14 +1443,19 @@ function QRScannerWebRTC({ onScan, onClose }) {
                         backgroundColor: 'transparent' // 투명 배경
                       }}
                     />
-                    {/* html5-qrcode가 생성한 요소들의 z-index 조정 */}
+                    {/* html5-qrcode가 생성한 요소들의 z-index 조정 및 QR 스캔 완료 시 카메라 숨김 */}
                     <style>{`
                       #qr-reader-webrtc video {
                         position: relative !important;
                         z-index: 1 !important;
+                        ${qrScanned ? 'display: none !important;' : ''}
                       }
                       #qr-reader-webrtc #qr-shaded-region {
                         z-index: 2 !important;
+                        ${qrScanned ? 'display: none !important;' : ''}
+                      }
+                      #qr-reader-webrtc #qr-reader__dashboard {
+                        ${qrScanned ? 'display: none !important;' : ''}
                       }
                       #qr-reader-webrtc #ar-animation-canvas {
                         position: absolute !important;
@@ -1451,8 +1481,8 @@ function QRScannerWebRTC({ onScan, onClose }) {
                       </div>
                     )}
                     
-                    {/* 텍스트 안내문 - AR 카메라 화면 하단 */}
-                    {isScanning && cameraPermission === 'granted' && (
+                    {/* 텍스트 안내문 - AR 카메라 화면 하단 (QR 스캔 완료 전에만 표시) */}
+                    {isScanning && cameraPermission === 'granted' && !qrScanned && (
                       <div 
                         className="qr-scanner-guide"
                         style={{
