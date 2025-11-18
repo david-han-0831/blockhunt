@@ -607,10 +607,13 @@ function QRScannerWebRTC({ onScan, onClose }) {
                   blockId: blockIdToLoad
                 };
                 
-                // 머티리얼 설정 (C4D Export 호환성)
+                // 머티리얼 설정 및 clickable 설정 (C4D Export 호환성)
                 model.traverse((child) => {
                   if (child.isMesh) {
+                    // 모든 mesh에 clickable 설정
                     child.userData.clickable = true;
+                    child.userData.isQRBlock = true;
+                    child.userData.blockId = blockIdToLoad;
                     
                     if (child.material) {
                       const materials = Array.isArray(child.material) ? child.material : [child.material];
@@ -626,6 +629,18 @@ function QRScannerWebRTC({ onScan, onClose }) {
                 
                 // 블록별 설정 적용 (크기, 위치, 회전, 자동 중앙 정렬)
                 applyBlockDisplayConfig(model, blockIdToLoad);
+                
+                // 블록의 bounding box 계산 및 로그 출력
+                const box = new THREE.Box3().setFromObject(model);
+                const size = box.getSize(new THREE.Vector3());
+                const center = box.getCenter(new THREE.Vector3());
+                
+                console.log(`📦 [QRScannerWebRTC] Block ${blockIdToLoad} bounding box:`, {
+                  size: { x: size.x, y: size.y, z: size.z },
+                  center: { x: center.x, y: center.y, z: center.z },
+                  position: { x: model.position.x, y: model.position.y, z: model.position.z },
+                  scale: { x: model.scale.x, y: model.scale.y, z: model.scale.z }
+                });
                 
                 sceneRef.current.add(model);
                 blocksRef.current = [model];
@@ -1040,22 +1055,77 @@ function QRScannerWebRTC({ onScan, onClose }) {
       const mouseX = ((clientX - rect.left) / rect.width) * 2 - 1;
       const mouseY = -((clientY - rect.top) / rect.height) * 2 + 1;
       
-      mouseRef.current.set(mouseX, mouseY);
-      raycasterRef.current.setFromCamera(mouseRef.current, cameraRef.current);
-      const intersects = raycasterRef.current.intersectObjects(sceneRef.current.children, true);
+      console.log('🖱️ [QRScannerWebRTC] Touch/Click coordinates:', {
+        clientX, clientY,
+        mouseX, mouseY,
+        canvasRect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height }
+      });
       
-      console.log('🖱️ [QRScannerWebRTC] Intersects:', intersects.length, 'at', clientX, clientY);
+      mouseRef.current.set(mouseX, mouseY);
+      
+      // Raycaster 설정 - 터치 영역 확대를 위해 threshold 증가
+      if (raycasterRef.current.params.Points) {
+        raycasterRef.current.params.Points.threshold = 1.0;
+      }
+      if (raycasterRef.current.params.Line) {
+        raycasterRef.current.params.Line.threshold = 1.0;
+      }
+      
+      // 모든 블록 객체 가져오기 (자식 mesh 포함)
+      const allObjects = [];
+      sceneRef.current.children.forEach(child => {
+        if (child.userData && child.userData.isQRBlock) {
+          allObjects.push(child);
+          // 모든 자식 mesh도 포함
+          child.traverse((obj) => {
+            if (obj.isMesh) {
+              allObjects.push(obj);
+            }
+          });
+        }
+      });
+      
+      // 블록이 없으면 전체 scene의 children 사용
+      const targetObjects = allObjects.length > 0 ? allObjects : sceneRef.current.children;
+      
+      console.log('🎯 [QRScannerWebRTC] Raycasting against objects:', {
+        totalObjects: targetObjects.length,
+        qrBlocks: allObjects.length,
+        blockIds: allObjects.map(obj => obj.userData?.blockId || 'unknown')
+      });
+      
+      raycasterRef.current.setFromCamera(mouseRef.current, cameraRef.current);
+      const intersects = raycasterRef.current.intersectObjects(targetObjects, true);
+      
+      console.log('🖱️ [QRScannerWebRTC] Raycast results:', {
+        totalObjects: allObjects.length,
+        intersects: intersects.length,
+        intersectsDetails: intersects.map(i => ({
+          object: i.object.userData,
+          distance: i.distance,
+          point: i.point
+        }))
+      });
       
       if (intersects.length > 0) {
         let clickableObject = intersects[0].object;
         let depth = 0;
+        
+        // 부모를 따라 올라가며 clickable 객체 찾기
         while (clickableObject && !clickableObject.userData.clickable && depth < 10) {
           clickableObject = clickableObject.parent;
           depth++;
         }
         
+        console.log('🖱️ [QRScannerWebRTC] Found clickable object:', {
+          clickable: !!clickableObject,
+          isQRBlock: clickableObject?.userData?.isQRBlock,
+          depth,
+          userData: clickableObject?.userData
+        });
+        
         if (clickableObject && clickableObject.userData.clickable && clickableObject.userData.isQRBlock) {
-          console.log('🖱️ [QRScannerWebRTC] QR Block clicked!', clickableObject);
+          console.log('✅ [QRScannerWebRTC] QR Block clicked!', clickableObject);
           
           // QR 블록 클릭 시 수집 완료 처리
           if (scannedData) {
@@ -1064,7 +1134,17 @@ function QRScannerWebRTC({ onScan, onClose }) {
             // 수집 완료 모달 표시
             setShowSuccessModal(true);
           }
+        } else {
+          console.warn('⚠️ [QRScannerWebRTC] Clicked object is not a QR block:', clickableObject);
         }
+      } else {
+        console.warn('⚠️ [QRScannerWebRTC] No intersects found. Block positions:', 
+          blocksRef.current.map(b => ({
+            position: b.position,
+            scale: b.scale,
+            userData: b.userData
+          }))
+        );
       }
     };
 
