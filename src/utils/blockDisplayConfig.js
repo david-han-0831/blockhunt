@@ -8,6 +8,13 @@
 import blockDisplayConfigs from '../config/blockDisplayConfigs.json';
 import * as THREE from 'three';
 
+// JSON 파일 로드 확인
+console.log('📦 [blockDisplayConfig] Config file loaded:', {
+  totalBlocks: Object.keys(blockDisplayConfigs).length,
+  blockIds: Object.keys(blockDisplayConfigs),
+  sampleConfig: blockDisplayConfigs[Object.keys(blockDisplayConfigs)[0]]
+});
+
 /**
  * 기본 설정값
  */
@@ -34,20 +41,33 @@ export const getBlockGLTFPath = (blockId) => {
  * @returns {Object} 블록 표시 설정
  */
 export const getBlockDisplayConfig = (blockId) => {
+  console.log(`🔍 [blockDisplayConfig] Getting config for blockId: "${blockId}"`);
+  console.log(`🔍 [blockDisplayConfig] Available keys in config:`, Object.keys(blockDisplayConfigs));
+  
   const config = blockDisplayConfigs[blockId];
   
   if (!config) {
-    console.warn(`⚠️ [blockDisplayConfig] No config found for block: ${blockId}, using defaults`);
+    console.warn(`⚠️ [blockDisplayConfig] No config found for block: "${blockId}", using defaults`);
+    console.warn(`⚠️ [blockDisplayConfig] Available block IDs:`, Object.keys(blockDisplayConfigs));
     return DEFAULT_CONFIG;
   }
   
-  return {
+  const finalConfig = {
     ...DEFAULT_CONFIG,
     ...config,
     position: { ...DEFAULT_CONFIG.position, ...(config.position || {}) },
     rotation: { ...DEFAULT_CONFIG.rotation, ...(config.rotation || {}) },
     centerOffset: { ...DEFAULT_CONFIG.centerOffset, ...(config.centerOffset || {}) }
   };
+  
+  console.log(`✅ [blockDisplayConfig] Config loaded for "${blockId}":`, {
+    scale: finalConfig.scale,
+    position: finalConfig.position,
+    rotation: finalConfig.rotation,
+    autoCenter: finalConfig.autoCenter
+  });
+  
+  return finalConfig;
 };
 
 /**
@@ -58,8 +78,26 @@ export const getBlockDisplayConfig = (blockId) => {
 export const applyBlockDisplayConfig = (model, blockId) => {
   const config = getBlockDisplayConfig(blockId);
   
+  console.log(`🎨 [blockDisplayConfig] Applying config to model for "${blockId}":`, {
+    scale: config.scale,
+    configType: typeof config.scale,
+    configValue: config.scale
+  });
+  
   // 크기 설정
-  model.scale.set(config.scale, config.scale, config.scale);
+  const scaleValue = config.scale || DEFAULT_CONFIG.scale;
+  console.log(`📏 [blockDisplayConfig] Setting scale to: ${scaleValue} (type: ${typeof scaleValue})`);
+  model.scale.set(scaleValue, scaleValue, scaleValue);
+  
+  // 원래 scale 값을 userData에 저장 (애니메이션에서 사용하기 위해)
+  model.userData.baseScale = scaleValue;
+  
+  console.log(`✅ [blockDisplayConfig] Model scale after setting:`, {
+    x: model.scale.x,
+    y: model.scale.y,
+    z: model.scale.z,
+    baseScale: model.userData.baseScale
+  });
   
   // 회전 설정
   model.rotation.set(
@@ -86,7 +124,8 @@ export const applyBlockDisplayConfig = (model, blockId) => {
       boundingBox: { min: box.min, max: box.max },
       center: center,
       finalPosition: model.position,
-      config: config
+      config: config,
+      baseScale: config.scale
     });
   } else {
     // 수동 위치 설정

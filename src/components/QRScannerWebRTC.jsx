@@ -308,9 +308,11 @@ function QRScannerWebRTC({ onScan, onClose }) {
         } else {
           // QR 스캔 후: 수집 완료 애니메이션 (펄스만)
           blocks.forEach((block) => {
-            // 펄스 효과 (크기 변화)
-            const scale = 1 + Math.sin(Date.now() * 0.01 + (block.userData.blockId?.charCodeAt(0) || 0)) * 0.2;
-            block.scale.set(scale, scale, scale);
+            // 펄스 효과 (크기 변화) - 원래 scale 값을 기준으로 적용
+            const baseScale = block.userData.baseScale || 20; // 기본값 20 (config에서 설정한 값)
+            const pulseFactor = 1 + Math.sin(Date.now() * 0.01 + (block.userData.blockId?.charCodeAt(0) || 0)) * 0.2;
+            const finalScale = baseScale * pulseFactor;
+            block.scale.set(finalScale, finalScale, finalScale);
           });
         }
         
@@ -545,11 +547,18 @@ function QRScannerWebRTC({ onScan, onClose }) {
           // QR 데이터 파싱하여 블록 ID 추출
           let blockId = null;
           try {
+            console.log('🔍 [QRScannerWebRTC] Parsing QR data:', decodedText);
             const qrPayload = JSON.parse(decodedText);
+            console.log('✅ [QRScannerWebRTC] Parsed QR payload:', qrPayload);
             blockId = qrPayload.block;
-            console.log('📦 [QRScannerWebRTC] Block ID from QR:', blockId);
+            console.log('📦 [QRScannerWebRTC] Extracted blockId:', blockId, `(type: ${typeof blockId})`);
+            
+            if (!blockId) {
+              console.error('❌ [QRScannerWebRTC] blockId is null or undefined in QR payload');
+            }
           } catch (err) {
             console.error('❌ [QRScannerWebRTC] Failed to parse QR data:', err);
+            console.error('❌ [QRScannerWebRTC] Raw decodedText:', decodedText);
             // QR 데이터 파싱 실패 시에도 기본 처리 진행
           }
           
@@ -660,17 +669,23 @@ function QRScannerWebRTC({ onScan, onClose }) {
                 const size = box.getSize(new THREE.Vector3());
                 const center = box.getCenter(new THREE.Vector3());
                 
-                console.log(`📦 [QRScannerWebRTC] Block ${blockIdToLoad} bounding box:`, {
-                  size: { x: size.x, y: size.y, z: size.z },
+                console.log(`📦 [QRScannerWebRTC] Block ${blockIdToLoad} after applyBlockDisplayConfig:`, {
+                  modelScale: { x: model.scale.x, y: model.scale.y, z: model.scale.z },
+                  boundingBoxSize: { x: size.x, y: size.y, z: size.z },
                   center: { x: center.x, y: center.y, z: center.z },
-                  position: { x: model.position.x, y: model.position.y, z: model.position.z },
-                  scale: { x: model.scale.x, y: model.scale.y, z: model.scale.z }
+                  position: { x: model.position.x, y: model.position.y, z: model.position.z }
                 });
                 
                 sceneRef.current.add(model);
                 blocksRef.current = [model];
                 
-                console.log(`✅ [QRScannerWebRTC] ${blockIdToLoad}.gltf model added to scene`);
+                // Scene에 추가한 후 다시 확인
+                const boxAfterAdd = new THREE.Box3().setFromObject(model);
+                const sizeAfterAdd = boxAfterAdd.getSize(new THREE.Vector3());
+                console.log(`✅ [QRScannerWebRTC] ${blockIdToLoad}.gltf model added to scene. Final scale:`, {
+                  modelScale: { x: model.scale.x, y: model.scale.y, z: model.scale.z },
+                  boundingBoxSize: { x: sizeAfterAdd.x, y: sizeAfterAdd.y, z: sizeAfterAdd.z }
+                });
               },
               (progress) => {
                 if (progress.total > 0) {
