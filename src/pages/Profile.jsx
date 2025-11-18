@@ -23,6 +23,7 @@ function Profile() {
   const [collected, setCollected] = useState(new Set());
   const [filterMode, setFilterMode] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState(null); // 카테고리 필터 상태
   const [showScanner, setShowScanner] = useState(false);
   const [blocks, setBlocks] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -227,28 +228,38 @@ function Profile() {
     }
   };
 
-  const filteredBlocks = blocks.filter(block => {
+  // QR Required 블록만 필터링 (isDefaultBlock === false)
+  const qrRequiredBlocks = blocks.filter(block => block.isDefaultBlock === false);
+
+  // 필터링 로직: QR Required 블록만 대상으로 필터링
+  const filteredBlocks = qrRequiredBlocks.filter(block => {
     const hasBlock = collected.has(block.id);
-    // QR Required 체크: isDefaultBlock이 false이거나 qrRequired가 true인 블록
-    const isQRRequired = block.isDefaultBlock === false || block.qrRequired === true;
+    const blockCategory = block.category || block.cat;
     
     let matchesFilter = false;
     if (filterMode === 'all') {
+      // All 탭: QR Required 블록 모두 표시
       matchesFilter = true;
     } else if (filterMode === 'collected') {
+      // Collected 탭: QR Required 블록 중 수집한 블록만 표시
       matchesFilter = hasBlock;
     } else if (filterMode === 'missing') {
-      // Missing 탭: QR Required이면서 아직 수집하지 않은 블록만 표시
-      matchesFilter = isQRRequired && !hasBlock;
+      // Missing 탭: QR Required 블록 중 미수집 블록만 표시
+      matchesFilter = !hasBlock;
     }
+    
+    // 카테고리 필터: QR Required 블록에서만 필터링
+    const matchesCategory = !selectedCategory || blockCategory === selectedCategory;
     
     const matchesSearch = !searchQuery || 
                          block.name.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesFilter && matchesSearch;
+    return matchesFilter && matchesCategory && matchesSearch;
   });
 
-  const totalBlocks = blocks.length;
-  const collectedCount = collected.size;
+  // Total Blocks: QR Required 블록만 카운트
+  const totalBlocks = qrRequiredBlocks.length;
+  // Collected Count: QR Required 블록 중 수집한 블록만 카운트
+  const collectedCount = qrRequiredBlocks.filter(block => collected.has(block.id)).length;
   const collectedPercent = totalBlocks > 0 ? Math.round((collectedCount / totalBlocks) * 100) : 0;
 
   return (
@@ -347,13 +358,55 @@ function Profile() {
               </button>
             </div>
             <div className="legend">
-              <span className="pill logic"><i className="bi bi-braces"></i> Logic</span>
-              <span className="pill loops"><i className="bi bi-arrow-repeat"></i> Loops</span>
-              <span className="pill math"><i className="bi bi-123"></i> Math</span>
-              <span className="pill text"><i className="bi bi-chat-dots"></i> Text</span>
-              <span className="pill lists"><i className="bi bi-list-ul"></i> Lists</span>
-              <span className="pill vars"><i className="bi bi-sliders"></i> Variables</span>
-              <span className="pill func"><i className="bi bi-puzzle"></i> Functions</span>
+              <span 
+                className={`pill logic ${selectedCategory === 'Logic' ? 'active' : ''}`}
+                onClick={() => setSelectedCategory(selectedCategory === 'Logic' ? null : 'Logic')}
+                style={{ cursor: 'pointer' }}
+              >
+                <i className="bi bi-braces"></i> Logic
+              </span>
+              <span 
+                className={`pill loops ${selectedCategory === 'Loops' ? 'active' : ''}`}
+                onClick={() => setSelectedCategory(selectedCategory === 'Loops' ? null : 'Loops')}
+                style={{ cursor: 'pointer' }}
+              >
+                <i className="bi bi-arrow-repeat"></i> Loops
+              </span>
+              <span 
+                className={`pill math ${selectedCategory === 'Math' ? 'active' : ''}`}
+                onClick={() => setSelectedCategory(selectedCategory === 'Math' ? null : 'Math')}
+                style={{ cursor: 'pointer' }}
+              >
+                <i className="bi bi-123"></i> Math
+              </span>
+              <span 
+                className={`pill text ${selectedCategory === 'Text' ? 'active' : ''}`}
+                onClick={() => setSelectedCategory(selectedCategory === 'Text' ? null : 'Text')}
+                style={{ cursor: 'pointer' }}
+              >
+                <i className="bi bi-chat-dots"></i> Text
+              </span>
+              <span 
+                className={`pill lists ${selectedCategory === 'Lists' ? 'active' : ''}`}
+                onClick={() => setSelectedCategory(selectedCategory === 'Lists' ? null : 'Lists')}
+                style={{ cursor: 'pointer' }}
+              >
+                <i className="bi bi-list-ul"></i> Lists
+              </span>
+              <span 
+                className={`pill vars ${selectedCategory === 'Variables' ? 'active' : ''}`}
+                onClick={() => setSelectedCategory(selectedCategory === 'Variables' ? null : 'Variables')}
+                style={{ cursor: 'pointer' }}
+              >
+                <i className="bi bi-sliders"></i> Variables
+              </span>
+              <span 
+                className={`pill func ${selectedCategory === 'Functions' ? 'active' : ''}`}
+                onClick={() => setSelectedCategory(selectedCategory === 'Functions' ? null : 'Functions')}
+                style={{ cursor: 'pointer' }}
+              >
+                <i className="bi bi-puzzle"></i> Functions
+              </span>
             </div>
             <div className="search">
               <input 
