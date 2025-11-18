@@ -1,6 +1,6 @@
 {
   "controls_if": {
-    "scale": 10,
+    "scale": 20,
     "position": {
       "x": 0,
       "y": 0,
@@ -19,7 +19,7 @@
     "autoCenter": true
   },
   "controls_flow_statements": {
-    "scale": 10,
+    "scale": 20,
     "position": {
       "x": 0,
       "y": 0,
@@ -38,7 +38,7 @@
     "autoCenter": true
   },
   "lists_repeat": {
-    "scale": 10,
+    "scale": 20,
     "position": {
       "x": 0,
       "y": 0,
@@ -57,7 +57,7 @@
     "autoCenter": true
   },
   "controls_for": {
-    "scale": 10,
+    "scale": 20,
     "position": {
       "x": 0,
       "y": 0,
@@ -76,7 +76,7 @@
     "autoCenter": true
   },
   "controls_forEach": {
-    "scale": 10,
+    "scale": 20,
     "position": {
       "x": 0,
       "y": 0,
@@ -95,7 +95,7 @@
     "autoCenter": true
   },
   "controls_repeat_ext": {
-    "scale": 10,
+    "scale": 20,
     "position": {
       "x": 0,
       "y": 0,
@@ -114,7 +114,7 @@
     "autoCenter": true
   },
   "controls_whileUntil": {
-    "scale": 10,
+    "scale": 20,
     "position": {
       "x": 0,
       "y": 0,
@@ -133,7 +133,7 @@
     "autoCenter": true
   },
   "text": {
-    "scale": 10,
+    "scale": 20,
     "position": {
       "x": 0,
       "y": 0,
@@ -152,7 +152,7 @@
     "autoCenter": true
   },
   "text_append": {
-    "scale": 10,
+    "scale": 20,
     "position": {
       "x": 0,
       "y": 0,
@@ -171,7 +171,7 @@
     "autoCenter": true
   },
   "text_join": {
-    "scale": 10,
+    "scale": 20,
     "position": {
       "x": 0,
       "y": 0,
@@ -190,7 +190,7 @@
     "autoCenter": true
   },
   "text_length": {
-    "scale": 10,
+    "scale": 20,
     "position": {
       "x": 0,
       "y": 0,
@@ -209,7 +209,7 @@
     "autoCenter": true
   },
   "text_print": {
-    "scale": 10,
+    "scale": 20,
     "position": {
       "x": 0,
       "y": 0,
@@ -228,7 +228,7 @@
     "autoCenter": true
   },
   "logic_negate": {
-    "scale": 10,
+    "scale": 20,
     "position": {
       "x": 0,
       "y": 0,
@@ -247,7 +247,7 @@
     "autoCenter": true
   },
   "logic_operation": {
-    "scale": 10,
+    "scale": 20,
     "position": {
       "x": 0,
       "y": 0,
@@ -266,7 +266,7 @@
     "autoCenter": true
   },
   "logic_compare": {
-    "scale": 10,
+    "scale": 20,
     "position": {
       "x": 0,
       "y": 0,
@@ -285,7 +285,7 @@
     "autoCenter": true
   },
   "logic_boolean": {
-    "scale": 10,
+    "scale": 20,
     "position": {
       "x": 0,
       "y": 0,
@@ -304,7 +304,7 @@
     "autoCenter": true
   },
   "math_arithmetic": {
-    "scale": 10,
+    "scale": 20,
     "position": {
       "x": 0,
       "y": 0,
@@ -323,7 +323,7 @@
     "autoCenter": true
   },
   "math_constant": {
-    "scale": 10,
+    "scale": 20,
     "position": {
       "x": 0,
       "y": 0,
@@ -342,7 +342,7 @@
     "autoCenter": true
   },
   "math_modulo": {
-    "scale": 10,
+    "scale": 20,
     "position": {
       "x": 0,
       "y": 0,
@@ -361,7 +361,7 @@
     "autoCenter": true
   },
   "math_number": {
-    "scale": 10,
+    "scale": 20,
     "position": {
       "x": 0,
       "y": 0,
@@ -380,7 +380,7 @@
     "autoCenter": true
   },
   "math_single": {
-    "scale": 10,
+    "scale": 20,
     "position": {
       "x": 0,
       "y": 0,
@@ -399,7 +399,7 @@
     "autoCenter": true
   },
   "math_trig": {
-    "scale": 10,
+    "scale": 20,
     "position": {
       "x": 0,
       "y": 0,
@@ -418,7 +418,7 @@
     "autoCenter": true
   },
   "lists_create_empty": {
-    "scale": 10,
+    "scale": 20,
     "position": {
       "x": 0,
       "y": 0,
@@ -437,7 +437,7 @@
     "autoCenter": true
   },
   "lists_create_with": {
-    "scale": 10,
+    "scale": 20,
     "position": {
       "x": 0,
       "y": 0,
@@ -456,7 +456,7 @@
     "autoCenter": true
   },
   "lists_getIndex": {
-    "scale": 10,
+    "scale": 20,
     "position": {
       "x": 0,
       "y": 0,
@@ -475,7 +475,7 @@
     "autoCenter": true
   },
   "lists_indexOf": {
-    "scale": 10,
+    "scale": 20,
     "position": {
       "x": 0,
       "y": 0,
@@ -494,7 +494,7 @@
     "autoCenter": true
   },
   "lists_isEmpty": {
-    "scale": 10,
+    "scale": 20,
     "position": {
       "x": 0,
       "y": 0,
@@ -513,7 +513,7 @@
     "autoCenter": true
   },
   "lists_length": {
-    "scale": 10,
+    "scale": 20,
     "position": {
       "x": 0,
       "y": 0,
