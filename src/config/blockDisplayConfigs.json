@@ -38,7 +38,7 @@
     "autoCenter": true
   },
   "lists_repeat": {
-    "scale": 20,
+    "scale": 12,
     "position": {
       "x": 0,
       "y": 0,
@@ -76,7 +76,7 @@
     "autoCenter": true
   },
   "controls_forEach": {
-    "scale": 20,
+    "scale": 24,
     "position": {
       "x": 0,
       "y": 0,
@@ -95,7 +95,7 @@
     "autoCenter": true
   },
   "controls_repeat_ext": {
-    "scale": 20,
+    "scale": 28,
     "position": {
       "x": 0,
       "y": 0,
@@ -114,7 +114,7 @@
     "autoCenter": true
   },
   "controls_whileUntil": {
-    "scale": 20,
+    "scale": 28,
     "position": {
       "x": 0,
       "y": 0,
@@ -209,7 +209,7 @@
     "autoCenter": true
   },
   "text_print": {
-    "scale": 20,
+    "scale": 28,
     "position": {
       "x": 0,
       "y": 0,
@@ -228,7 +228,7 @@
     "autoCenter": true
   },
   "logic_negate": {
-    "scale": 20,
+    "scale": 24,
     "position": {
       "x": 0,
       "y": 0,
@@ -285,7 +285,7 @@
     "autoCenter": true
   },
   "logic_boolean": {
-    "scale": 20,
+    "scale": 24,
     "position": {
       "x": 0,
       "y": 0,
@@ -323,7 +323,7 @@
     "autoCenter": true
   },
   "math_constant": {
-    "scale": 20,
+    "scale": 24,
     "position": {
       "x": 0,
       "y": 0,
@@ -361,7 +361,7 @@
     "autoCenter": true
   },
   "math_number": {
-    "scale": 20,
+    "scale": 24,
     "position": {
       "x": 0,
       "y": 0,
@@ -437,7 +437,7 @@
     "autoCenter": true
   },
   "lists_create_with": {
-    "scale": 20,
+    "scale": 28,
     "position": {
       "x": 0,
       "y": 0,
@@ -456,7 +456,7 @@
     "autoCenter": true
   },
   "lists_getIndex": {
-    "scale": 20,
+    "scale": 16,
     "position": {
       "x": 0,
       "y": 0,
@@ -475,7 +475,7 @@
     "autoCenter": true
   },
   "lists_indexOf": {
-    "scale": 20,
+    "scale": 12,
     "position": {
       "x": 0,
       "y": 0,
