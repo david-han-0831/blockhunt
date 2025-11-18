@@ -668,25 +668,6 @@ body.studio{ display:flex; flex-direction:column; min-height:100svh }
   .block-card, .hero-cta, .btn, .btn-ghost, .btn-brand, .btn-solve { transition:none }
   .block-card:hover{ transform:none }
 }
-@media (prefers-color-scheme:dark){
-  .hero-wrap, .stat, .panel, .block-card{ background:#101431 }
-  .search input{ background:#0f1330; color:#d8dbff }
-  .block-card.missing{ background:linear-gradient(135deg,#0f1230,#141943); border-left-color:#3b4264; filter:saturate(1) }
-  .block-card.missing::after{ box-shadow:0 0 0 2px #0f1330 }
-  .cat-logic  .block-card{ border-left-color:#00bcd4 }
-  .cat-loops  .block-card{ border-left-color:#fb8c00 }
-  .cat-math   .block-card{ border-left-color:#43a047 }
-  .cat-text   .block-card{ border-left-color:#8e24aa }
-  .cat-lists  .block-card{ border-left-color:#039be5 }
-  .cat-vars   .block-card{ border-left-color:#fbc02d }
-  .cat-func   .block-card{ border-left-color:#ff7043 }
-
-  /* Studio */
-  .studio .hero-studio, .studio .actionbar{ background:#101431; border-color:#22264d }
-  .studio .hero-studio .sub{ color:#b7c0ff }
-  .studio #blocklyArea{ border-color:#252b63 }
-  .studio .code{ background:#0f1330; color:#d8dbff; border-color:#252b63 }
-}
 
 
 
