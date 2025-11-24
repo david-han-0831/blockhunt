@@ -19,7 +19,7 @@ console.log('📦 [blockDisplayConfig] Config file loaded:', {
  * 기본 설정값
  */
 const DEFAULT_CONFIG = {
-  scale: 7, // 기본 크기를 7로 증가 (이전: 5)
+  scale: 5,
   position: { x: 0, y: 0, z: -1.5 },
   rotation: { x: 0, y: 0, z: 0 },
   centerOffset: { x: 0, y: 0, z: 0 },

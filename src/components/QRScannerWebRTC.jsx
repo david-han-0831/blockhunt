@@ -382,15 +382,10 @@ function QRScannerWebRTC({ onScan, onClose }) {
           console.log('🖱️ [QRScannerWebRTC] Clickable object found:', !!clickableObject, 'depth:', depth);
           
           if (clickableObject && clickableObject.userData.clickable && clickableObject.userData.isQRBlock) {
-            console.log('🖱️ [QRScannerWebRTC] QR Block clicked!', clickableObject);
+            console.log('🖱️ [QRScannerWebRTC] QR Block clicked! (Click disabled - use Catch button instead)', clickableObject);
             
-            // QR 블록 클릭 시 수집 완료 처리
-            if (scannedData) {
-              // onScan 호출하여 수집 완료 처리
-              onScan(scannedData);
-              // 수집 완료 모달 표시
-              setShowSuccessModal(true);
-            }
+            // 블록 클릭 시 모달 표시하지 않음 - 캐치 버튼으로만 수집 처리
+            // 클릭은 무시하고 캐치 버튼 사용 안내만 표시
           } else {
             console.log('⚠️ [QRScannerWebRTC] Clicked object is not a QR block');
           }
@@ -1436,15 +1431,10 @@ function QRScannerWebRTC({ onScan, onClose }) {
         });
         
         if (clickableObject && clickableObject.userData.clickable && clickableObject.userData.isQRBlock) {
-          console.log('✅ [QRScannerWebRTC] QR Block clicked!', clickableObject);
+          console.log('✅ [QRScannerWebRTC] QR Block clicked! (Click disabled - use Catch button instead)', clickableObject);
           
-          // QR 블록 클릭 시 수집 완료 처리
-          if (scannedData) {
-            // onScan 호출하여 수집 완료 처리
-            onScan(scannedData);
-            // 수집 완료 모달 표시
-            setShowSuccessModal(true);
-          }
+          // 블록 클릭 시 모달 표시하지 않음 - 캐치 버튼으로만 수집 처리
+          // 클릭은 무시하고 캐치 버튼 사용 안내만 표시 (선택사항)
         } else {
           console.warn('⚠️ [QRScannerWebRTC] Clicked object is not a QR block:', clickableObject);
         }
