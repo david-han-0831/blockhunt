@@ -264,9 +264,9 @@ function QRScannerWebRTC({ onScan, onClose }) {
           arCanvasRef.current.style.width = `${width}px`;
           arCanvasRef.current.style.height = `${height}px`;
           arCanvasRef.current.style.zIndex = '1000';
-          arCanvasRef.current.style.pointerEvents = 'none';
+          arCanvasRef.current.style.pointerEvents = 'auto'; // 터치 및 클릭 이벤트 활성화 (드래그를 위해 필수)
           arCanvasRef.current.style.backgroundColor = 'transparent';
-          arCanvasRef.current.style.touchAction = 'none'; // 모바일 터치 기본 동작 방지
+          arCanvasRef.current.style.touchAction = 'none'; // 모바일 터치 기본 동작 방지 (스크롤, 줌 등)
           
           console.log('🎨 [QRScannerWebRTC] Canvas size set to match video:', {
             width: arCanvasRef.current.width,
@@ -1115,11 +1115,15 @@ function QRScannerWebRTC({ onScan, onClose }) {
 
   // 블록 회전 기능을 위한 터치 이벤트 핸들러
   useEffect(() => {
-    if (!qrScanned || !arCanvasRef.current || blocksRef.current.length === 0) {
+    // qrScanned가 true이고 canvas가 있으면 이벤트 리스너 등록
+    // blocksRef는 나중에 로드될 수 있으므로 조건에서 제외
+    if (!qrScanned || !arCanvasRef.current) {
+      console.log('⚠️ [QRScannerWebRTC] Rotation listeners not added:', { qrScanned, hasCanvas: !!arCanvasRef.current });
       return;
     }
 
     const canvas = arCanvasRef.current;
+    console.log('🔄 [QRScannerWebRTC] Setting up rotation listeners, blocks:', blocksRef.current.length);
 
     const handleTouchStart = (event) => {
       if (event.touches.length !== 1) return; // 단일 터치만 처리
@@ -1139,7 +1143,13 @@ function QRScannerWebRTC({ onScan, onClose }) {
     };
 
     const handleTouchMove = (event) => {
-      if (event.touches.length !== 1 || blocksRef.current.length === 0) return;
+      if (event.touches.length !== 1) return;
+      
+      // 블록이 없으면 무시
+      if (blocksRef.current.length === 0) {
+        console.log('⚠️ [QRScannerWebRTC] Touch move ignored - no blocks');
+        return;
+      }
       
       // touchStart가 활성화되지 않았으면 무시
       if (!touchStartRef.current.isActive) {
@@ -1220,7 +1230,12 @@ function QRScannerWebRTC({ onScan, onClose }) {
     };
 
     const handleMouseMove = (event) => {
-      if (event.buttons !== 1 || blocksRef.current.length === 0) return; // 왼쪽 버튼만 처리
+      if (event.buttons !== 1) return; // 왼쪽 버튼만 처리
+      
+      // 블록이 없으면 무시
+      if (blocksRef.current.length === 0) {
+        return;
+      }
       
       // touchStart가 활성화되지 않았으면 무시
       if (!touchStartRef.current.isActive) {
@@ -1295,7 +1310,7 @@ function QRScannerWebRTC({ onScan, onClose }) {
       canvas.removeEventListener('mouseleave', handleMouseUp);
       console.log('🔄 [QRScannerWebRTC] Rotation touch listeners removed');
     };
-  }, [qrScanned, rotationSensitivity, clickThreshold]);
+  }, [qrScanned, rotationSensitivity, clickThreshold]); // blocksRef는 ref이므로 dependency에 포함하지 않음
 
   // 클릭 이벤트 리스너 관리 (별도 useEffect로 분리)
   useEffect(() => {
