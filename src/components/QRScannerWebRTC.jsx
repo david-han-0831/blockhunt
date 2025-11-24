@@ -1583,7 +1583,10 @@ function QRScannerWebRTC({ onScan, onClose }) {
               border: 'none',
               borderRadius: '16px',
               position: 'relative',
-              zIndex: 1
+              zIndex: 1,
+              maxHeight: '100vh', // 화면 높이를 넘지 않도록
+              display: 'flex',
+              flexDirection: 'column'
             }}
           >
             <div 
@@ -1612,7 +1615,10 @@ function QRScannerWebRTC({ onScan, onClose }) {
               style={{ 
                 backgroundColor: '#ffffff', 
                 opacity: 1,
-                color: '#0f1224'
+                color: '#0f1224',
+                maxHeight: 'calc(100vh - 200px)', // 모달 헤더와 푸터 공간 확보
+                overflowY: 'auto', // 내용이 길면 스크롤 가능
+                overflowX: 'hidden'
               }}
             >
               {/* HTTPS 경고 */}
@@ -1816,32 +1822,6 @@ function QRScannerWebRTC({ onScan, onClose }) {
                       </div>
                     )}
                     
-                    {/* 회전 안내문 - QR 스캔 완료 후 블록이 표시될 때 */}
-                    {qrScanned && blocksRef.current.length > 0 && (
-                      <div 
-                        className="qr-scanner-rotation-guide"
-                        style={{
-                          position: 'absolute',
-                          bottom: '80px',
-                          left: '50%',
-                          transform: 'translateX(-50%)',
-                          backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                          color: 'white',
-                          padding: '10px 20px',
-                          borderRadius: '8px',
-                          fontSize: '13px',
-                          fontWeight: '500',
-                          zIndex: 1001,
-                          pointerEvents: 'none',
-                          textAlign: 'center',
-                          whiteSpace: 'nowrap',
-                          display: isRotating ? 'none' : 'block' // 회전 중에는 숨김
-                        }}
-                      >
-                        <i className="bi bi-arrow-repeat me-2"></i>
-                        Drag to rotate the block
-                      </div>
-                    )}
                   </div>
                 </>
               )}
@@ -1856,7 +1836,11 @@ function QRScannerWebRTC({ onScan, onClose }) {
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
-                gap: '1rem'
+                gap: '1rem',
+                flexShrink: 0, // 푸터가 축소되지 않도록
+                position: 'sticky', // 스크롤 시에도 하단에 고정
+                bottom: 0,
+                zIndex: 10
               }}
             >
               {/* 캐치 버튼 - QR 스캔 완료 후 블록이 표시될 때만 표시 */}
