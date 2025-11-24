@@ -29,7 +29,7 @@ function QRScannerWebRTC({ onScan, onClose }) {
   const raycasterRef = useRef(null);
   const mouseRef = useRef(new THREE.Vector2());
   // 블록 회전 기능을 위한 ref 및 상태
-  const touchStartRef = useRef({ x: 0, y: 0, isRotating: false, hasMoved: false });
+  const touchStartRef = useRef({ x: 0, y: 0, isRotating: false, hasMoved: false, isActive: false });
   const rotationSensitivity = 0.01; // 회전 감도 (조정 가능)
   const clickThreshold = 10; // 클릭과 회전을 구분하는 픽셀 임계값
   const [isRotating, setIsRotating] = useState(false);
@@ -1129,14 +1129,23 @@ function QRScannerWebRTC({ onScan, onClose }) {
         x: touch.clientX,
         y: touch.clientY,
         isRotating: false,
-        hasMoved: false // 이동 여부 플래그 초기화
+        hasMoved: false, // 이동 여부 플래그 초기화
+        isActive: true // 터치가 활성화되었음을 표시
       };
       setIsRotating(false);
+      console.log('🔄 [QRScannerWebRTC] Touch started at:', { x: touch.clientX, y: touch.clientY });
       event.preventDefault();
+      event.stopPropagation(); // 다른 이벤트 핸들러와의 충돌 방지
     };
 
     const handleTouchMove = (event) => {
       if (event.touches.length !== 1 || blocksRef.current.length === 0) return;
+      
+      // touchStart가 활성화되지 않았으면 무시
+      if (!touchStartRef.current.isActive) {
+        console.log('⚠️ [QRScannerWebRTC] Touch move ignored - not active');
+        return;
+      }
       
       const touch = event.touches[0];
       const deltaX = touch.clientX - touchStartRef.current.x;
@@ -1153,6 +1162,7 @@ function QRScannerWebRTC({ onScan, onClose }) {
         if (!touchStartRef.current.isRotating) {
           touchStartRef.current.isRotating = true;
           setIsRotating(true);
+          console.log('🔄 [QRScannerWebRTC] Rotation started');
         }
 
         // 블록 회전 적용
@@ -1169,6 +1179,10 @@ function QRScannerWebRTC({ onScan, onClose }) {
         // 시작점 업데이트 (상대적 회전을 위해)
         touchStartRef.current.x = touch.clientX;
         touchStartRef.current.y = touch.clientY;
+      } else {
+        // 작은 이동도 시작점 업데이트 (누적 이동 거리 계산을 위해)
+        touchStartRef.current.x = touch.clientX;
+        touchStartRef.current.y = touch.clientY;
       }
 
       event.preventDefault();
@@ -1179,8 +1193,10 @@ function QRScannerWebRTC({ onScan, onClose }) {
       // 그 외의 경우는 회전이었으므로 클릭 무시
       const wasClick = !touchStartRef.current.hasMoved && !touchStartRef.current.isRotating;
       
+      console.log('🔄 [QRScannerWebRTC] Touch ended:', { wasClick, hasMoved: touchStartRef.current.hasMoved, isRotating: touchStartRef.current.isRotating });
+      
       // 회전 상태 초기화
-      touchStartRef.current = { x: 0, y: 0, isRotating: false, hasMoved: false };
+      touchStartRef.current = { x: 0, y: 0, isRotating: false, hasMoved: false, isActive: false };
       setIsRotating(false);
       
       // 클릭이 아니면 이벤트 전파 중지 (클릭 핸들러가 실행되지 않도록)
@@ -1196,13 +1212,20 @@ function QRScannerWebRTC({ onScan, onClose }) {
         x: event.clientX,
         y: event.clientY,
         isRotating: false,
-        hasMoved: false
+        hasMoved: false,
+        isActive: true
       };
       setIsRotating(false);
+      console.log('🖱️ [QRScannerWebRTC] Mouse down at:', { x: event.clientX, y: event.clientY });
     };
 
     const handleMouseMove = (event) => {
       if (event.buttons !== 1 || blocksRef.current.length === 0) return; // 왼쪽 버튼만 처리
+      
+      // touchStart가 활성화되지 않았으면 무시
+      if (!touchStartRef.current.isActive) {
+        return;
+      }
       
       const deltaX = event.clientX - touchStartRef.current.x;
       const deltaY = event.clientY - touchStartRef.current.y;
@@ -1217,6 +1240,7 @@ function QRScannerWebRTC({ onScan, onClose }) {
         if (!touchStartRef.current.isRotating) {
           touchStartRef.current.isRotating = true;
           setIsRotating(true);
+          console.log('🔄 [QRScannerWebRTC] Rotation started (mouse)');
         }
 
         const block = blocksRef.current[0];
@@ -1228,12 +1252,17 @@ function QRScannerWebRTC({ onScan, onClose }) {
 
         touchStartRef.current.x = event.clientX;
         touchStartRef.current.y = event.clientY;
+      } else {
+        // 작은 이동도 시작점 업데이트
+        touchStartRef.current.x = event.clientX;
+        touchStartRef.current.y = event.clientY;
       }
     };
 
     const handleMouseUp = (event) => {
       const wasClick = !touchStartRef.current.hasMoved && !touchStartRef.current.isRotating;
-      touchStartRef.current = { x: 0, y: 0, isRotating: false, hasMoved: false };
+      console.log('🖱️ [QRScannerWebRTC] Mouse up:', { wasClick, hasMoved: touchStartRef.current.hasMoved, isRotating: touchStartRef.current.isRotating });
+      touchStartRef.current = { x: 0, y: 0, isRotating: false, hasMoved: false, isActive: false };
       setIsRotating(false);
       
       // 드래그였으면 클릭 이벤트 방지
@@ -1687,8 +1716,9 @@ function QRScannerWebRTC({ onScan, onClose }) {
                         width: '100%',
                         height: '100%',
                         zIndex: 1000,  // 매우 높은 z-index
-                        pointerEvents: 'auto',  // 클릭 이벤트 활성화
-                        backgroundColor: 'transparent' // 투명 배경
+                        pointerEvents: 'auto',  // 터치 및 클릭 이벤트 활성화
+                        backgroundColor: 'transparent', // 투명 배경
+                        touchAction: 'none' // 모바일 기본 터치 동작 방지 (스크롤, 줌 등)
                       }}
                     />
                     {/* html5-qrcode가 생성한 요소들의 z-index 조정 및 QR 스캔 완료 시 카메라 숨김 */}
