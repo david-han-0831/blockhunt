@@ -29,7 +29,7 @@ function QRScannerWebRTC({ onScan, onClose }) {
   const raycasterRef = useRef(null);
   const mouseRef = useRef(new THREE.Vector2());
   // 블록 회전 기능을 위한 ref 및 상태
-  const touchStartRef = useRef({ x: 0, y: 0, isRotating: false });
+  const touchStartRef = useRef({ x: 0, y: 0, isRotating: false, hasMoved: false });
   const rotationSensitivity = 0.01; // 회전 감도 (조정 가능)
   const clickThreshold = 10; // 클릭과 회전을 구분하는 픽셀 임계값
   const [isRotating, setIsRotating] = useState(false);
@@ -1128,7 +1128,8 @@ function QRScannerWebRTC({ onScan, onClose }) {
       touchStartRef.current = {
         x: touch.clientX,
         y: touch.clientY,
-        isRotating: false
+        isRotating: false,
+        hasMoved: false // 이동 여부 플래그 초기화
       };
       setIsRotating(false);
       event.preventDefault();
@@ -1141,6 +1142,11 @@ function QRScannerWebRTC({ onScan, onClose }) {
       const deltaX = touch.clientX - touchStartRef.current.x;
       const deltaY = touch.clientY - touchStartRef.current.y;
       const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+      // 이동이 감지되면 hasMoved 플래그 설정 (클릭 방지)
+      if (distance > 3) { // 3px 이상 이동하면 드래그로 간주
+        touchStartRef.current.hasMoved = true;
+      }
 
       // 이동 거리가 임계값 이상이면 회전 모드로 전환
       if (distance > clickThreshold) {
@@ -1169,9 +1175,19 @@ function QRScannerWebRTC({ onScan, onClose }) {
     };
 
     const handleTouchEnd = (event) => {
-      // 회전이 시작되지 않았고 이동 거리가 작으면 클릭으로 처리하지 않음 (기존 클릭 핸들러가 처리)
-      touchStartRef.current = { x: 0, y: 0, isRotating: false };
+      // hasMoved가 false이고 isRotating이 false면 클릭으로 처리 가능
+      // 그 외의 경우는 회전이었으므로 클릭 무시
+      const wasClick = !touchStartRef.current.hasMoved && !touchStartRef.current.isRotating;
+      
+      // 회전 상태 초기화
+      touchStartRef.current = { x: 0, y: 0, isRotating: false, hasMoved: false };
       setIsRotating(false);
+      
+      // 클릭이 아니면 이벤트 전파 중지 (클릭 핸들러가 실행되지 않도록)
+      if (!wasClick) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
     };
 
     // 마우스 드래그 지원 (데스크톱)
@@ -1179,7 +1195,8 @@ function QRScannerWebRTC({ onScan, onClose }) {
       touchStartRef.current = {
         x: event.clientX,
         y: event.clientY,
-        isRotating: false
+        isRotating: false,
+        hasMoved: false
       };
       setIsRotating(false);
     };
@@ -1190,6 +1207,11 @@ function QRScannerWebRTC({ onScan, onClose }) {
       const deltaX = event.clientX - touchStartRef.current.x;
       const deltaY = event.clientY - touchStartRef.current.y;
       const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+      // 이동이 감지되면 hasMoved 플래그 설정
+      if (distance > 3) {
+        touchStartRef.current.hasMoved = true;
+      }
 
       if (distance > clickThreshold) {
         if (!touchStartRef.current.isRotating) {
@@ -1209,9 +1231,16 @@ function QRScannerWebRTC({ onScan, onClose }) {
       }
     };
 
-    const handleMouseUp = () => {
-      touchStartRef.current = { x: 0, y: 0, isRotating: false };
+    const handleMouseUp = (event) => {
+      const wasClick = !touchStartRef.current.hasMoved && !touchStartRef.current.isRotating;
+      touchStartRef.current = { x: 0, y: 0, isRotating: false, hasMoved: false };
       setIsRotating(false);
+      
+      // 드래그였으면 클릭 이벤트 방지
+      if (!wasClick && event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
     };
 
     // 터치 이벤트 리스너 추가
@@ -1247,16 +1276,22 @@ function QRScannerWebRTC({ onScan, onClose }) {
     }
 
     const handleClick = (event) => {
-      // 회전 중이면 클릭 이벤트 무시
-      if (touchStartRef.current.isRotating) {
-        console.log('🔄 [QRScannerWebRTC] Ignoring click during rotation');
+      // 회전 중이거나 이동이 있었으면 클릭 이벤트 무시
+      if (touchStartRef.current.isRotating || touchStartRef.current.hasMoved) {
+        console.log('🔄 [QRScannerWebRTC] Ignoring click - was rotation/drag');
         return;
       }
 
       console.log('🖱️ [QRScannerWebRTC] Canvas clicked/touched in useEffect!', event.type);
       
+      // touchstart에서는 클릭 처리하지 않음 (touchend에서만 처리)
+      if (event.type === 'touchstart') {
+        console.log('🔄 [QRScannerWebRTC] Ignoring touchstart - waiting for touchend');
+        return;
+      }
+      
       // 모바일 터치 이벤트의 기본 동작 방지 (스크롤, 줌 등)
-      if (event.type === 'touchend' || event.type === 'touchstart') {
+      if (event.type === 'touchend') {
         event.preventDefault();
         event.stopPropagation();
       }
@@ -1382,16 +1417,14 @@ function QRScannerWebRTC({ onScan, onClose }) {
 
     const canvas = arCanvasRef.current;
     
-    // 클릭 및 터치 이벤트 모두 처리 (모바일 지원)
-    // 모바일에서는 touchstart와 touchend 모두 처리
+    // 클릭 및 터치 이벤트 처리 (모바일 지원)
+    // touchstart는 제외하고 touchend와 click만 처리 (드래그와 클릭 구분을 위해)
     canvas.addEventListener('click', handleClick);
-    canvas.addEventListener('touchstart', handleClick, { passive: false }); // passive: false로 preventDefault 허용
     canvas.addEventListener('touchend', handleClick, { passive: false });
     console.log('🖱️ [QRScannerWebRTC] Click and touch listeners added in useEffect');
 
     return () => {
       canvas.removeEventListener('click', handleClick);
-      canvas.removeEventListener('touchstart', handleClick);
       canvas.removeEventListener('touchend', handleClick);
       console.log('🖱️ [QRScannerWebRTC] Click and touch listeners removed');
     };
