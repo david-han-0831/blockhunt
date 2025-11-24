@@ -28,6 +28,11 @@ function QRScannerWebRTC({ onScan, onClose }) {
   const blocksDataRef = useRef([]); // Firebase에서 가져온 블록 데이터
   const raycasterRef = useRef(null);
   const mouseRef = useRef(new THREE.Vector2());
+  // 블록 회전 기능을 위한 ref 및 상태
+  const touchStartRef = useRef({ x: 0, y: 0, isRotating: false });
+  const rotationSensitivity = 0.01; // 회전 감도 (조정 가능)
+  const clickThreshold = 10; // 클릭과 회전을 구분하는 픽셀 임계값
+  const [isRotating, setIsRotating] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [error, setError] = useState(null);
   const [showManualInput, setShowManualInput] = useState(false);
@@ -1108,6 +1113,132 @@ function QRScannerWebRTC({ onScan, onClose }) {
     qrScannedRef.current = qrScanned;
   }, [qrScanned]);
 
+  // 블록 회전 기능을 위한 터치 이벤트 핸들러
+  useEffect(() => {
+    if (!qrScanned || !arCanvasRef.current || blocksRef.current.length === 0) {
+      return;
+    }
+
+    const canvas = arCanvasRef.current;
+
+    const handleTouchStart = (event) => {
+      if (event.touches.length !== 1) return; // 단일 터치만 처리
+      
+      const touch = event.touches[0];
+      touchStartRef.current = {
+        x: touch.clientX,
+        y: touch.clientY,
+        isRotating: false
+      };
+      setIsRotating(false);
+      event.preventDefault();
+    };
+
+    const handleTouchMove = (event) => {
+      if (event.touches.length !== 1 || blocksRef.current.length === 0) return;
+      
+      const touch = event.touches[0];
+      const deltaX = touch.clientX - touchStartRef.current.x;
+      const deltaY = touch.clientY - touchStartRef.current.y;
+      const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+      // 이동 거리가 임계값 이상이면 회전 모드로 전환
+      if (distance > clickThreshold) {
+        if (!touchStartRef.current.isRotating) {
+          touchStartRef.current.isRotating = true;
+          setIsRotating(true);
+        }
+
+        // 블록 회전 적용
+        const block = blocksRef.current[0];
+        if (block) {
+          // Y축 회전 (수평 드래그)
+          block.rotation.y += deltaX * rotationSensitivity;
+          
+          // X축 회전 (수직 드래그) - 제한 적용
+          block.rotation.x += deltaY * rotationSensitivity;
+          block.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, block.rotation.x));
+        }
+
+        // 시작점 업데이트 (상대적 회전을 위해)
+        touchStartRef.current.x = touch.clientX;
+        touchStartRef.current.y = touch.clientY;
+      }
+
+      event.preventDefault();
+    };
+
+    const handleTouchEnd = (event) => {
+      // 회전이 시작되지 않았고 이동 거리가 작으면 클릭으로 처리하지 않음 (기존 클릭 핸들러가 처리)
+      touchStartRef.current = { x: 0, y: 0, isRotating: false };
+      setIsRotating(false);
+    };
+
+    // 마우스 드래그 지원 (데스크톱)
+    const handleMouseDown = (event) => {
+      touchStartRef.current = {
+        x: event.clientX,
+        y: event.clientY,
+        isRotating: false
+      };
+      setIsRotating(false);
+    };
+
+    const handleMouseMove = (event) => {
+      if (event.buttons !== 1 || blocksRef.current.length === 0) return; // 왼쪽 버튼만 처리
+      
+      const deltaX = event.clientX - touchStartRef.current.x;
+      const deltaY = event.clientY - touchStartRef.current.y;
+      const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+      if (distance > clickThreshold) {
+        if (!touchStartRef.current.isRotating) {
+          touchStartRef.current.isRotating = true;
+          setIsRotating(true);
+        }
+
+        const block = blocksRef.current[0];
+        if (block) {
+          block.rotation.y += deltaX * rotationSensitivity;
+          block.rotation.x += deltaY * rotationSensitivity;
+          block.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, block.rotation.x));
+        }
+
+        touchStartRef.current.x = event.clientX;
+        touchStartRef.current.y = event.clientY;
+      }
+    };
+
+    const handleMouseUp = () => {
+      touchStartRef.current = { x: 0, y: 0, isRotating: false };
+      setIsRotating(false);
+    };
+
+    // 터치 이벤트 리스너 추가
+    canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+    canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+    canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
+    
+    // 마우스 이벤트 리스너 추가 (데스크톱 지원)
+    canvas.addEventListener('mousedown', handleMouseDown);
+    canvas.addEventListener('mousemove', handleMouseMove);
+    canvas.addEventListener('mouseup', handleMouseUp);
+    canvas.addEventListener('mouseleave', handleMouseUp); // 마우스가 캔버스 밖으로 나갈 때
+
+    console.log('🔄 [QRScannerWebRTC] Rotation touch listeners added');
+
+    return () => {
+      canvas.removeEventListener('touchstart', handleTouchStart);
+      canvas.removeEventListener('touchmove', handleTouchMove);
+      canvas.removeEventListener('touchend', handleTouchEnd);
+      canvas.removeEventListener('mousedown', handleMouseDown);
+      canvas.removeEventListener('mousemove', handleMouseMove);
+      canvas.removeEventListener('mouseup', handleMouseUp);
+      canvas.removeEventListener('mouseleave', handleMouseUp);
+      console.log('🔄 [QRScannerWebRTC] Rotation touch listeners removed');
+    };
+  }, [qrScanned, rotationSensitivity, clickThreshold]);
+
   // 클릭 이벤트 리스너 관리 (별도 useEffect로 분리)
   useEffect(() => {
     // QR 스캔 후에도 클릭 가능하도록 isScanning 또는 qrScanned 조건 추가
@@ -1116,6 +1247,12 @@ function QRScannerWebRTC({ onScan, onClose }) {
     }
 
     const handleClick = (event) => {
+      // 회전 중이면 클릭 이벤트 무시
+      if (touchStartRef.current.isRotating) {
+        console.log('🔄 [QRScannerWebRTC] Ignoring click during rotation');
+        return;
+      }
+
       console.log('🖱️ [QRScannerWebRTC] Canvas clicked/touched in useEffect!', event.type);
       
       // 모바일 터치 이벤트의 기본 동작 방지 (스크롤, 줌 등)
@@ -1289,6 +1426,14 @@ function QRScannerWebRTC({ onScan, onClose }) {
     setError(null);
     setIsInitialized(false);
     startQRScanner();
+  };
+
+  // 캐치 버튼 핸들러
+  const handleCatchButton = () => {
+    if (scannedData) {
+      onScan(scannedData);
+      setShowSuccessModal(true);
+    }
   };
 
   return (
@@ -1575,6 +1720,33 @@ function QRScannerWebRTC({ onScan, onClose }) {
                         Scan a QR code to discover blocks
                       </div>
                     )}
+                    
+                    {/* 회전 안내문 - QR 스캔 완료 후 블록이 표시될 때 */}
+                    {qrScanned && blocksRef.current.length > 0 && (
+                      <div 
+                        className="qr-scanner-rotation-guide"
+                        style={{
+                          position: 'absolute',
+                          bottom: '80px',
+                          left: '50%',
+                          transform: 'translateX(-50%)',
+                          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                          color: 'white',
+                          padding: '10px 20px',
+                          borderRadius: '8px',
+                          fontSize: '13px',
+                          fontWeight: '500',
+                          zIndex: 1001,
+                          pointerEvents: 'none',
+                          textAlign: 'center',
+                          whiteSpace: 'nowrap',
+                          display: isRotating ? 'none' : 'block' // 회전 중에는 숨김
+                        }}
+                      >
+                        <i className="bi bi-arrow-repeat me-2"></i>
+                        Drag to rotate the block
+                      </div>
+                    )}
                   </div>
                 </>
               )}
@@ -1585,9 +1757,43 @@ function QRScannerWebRTC({ onScan, onClose }) {
                 backgroundColor: '#ffffff', 
                 borderTop: '1px solid #dee2e6', 
                 opacity: 1,
-                borderRadius: '0 0 16px 16px'
+                borderRadius: '0 0 16px 16px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: '1rem'
               }}
             >
+              {/* 캐치 버튼 - QR 스캔 완료 후 블록이 표시될 때만 표시 */}
+              {qrScanned && blocksRef.current.length > 0 && (
+                <button 
+                  type="button" 
+                  className="btn btn-success" 
+                  onClick={handleCatchButton}
+                  style={{ 
+                    opacity: 1,
+                    flex: 1,
+                    padding: '12px 24px',
+                    fontSize: '16px',
+                    fontWeight: '600',
+                    borderRadius: '8px',
+                    boxShadow: '0 4px 12px rgba(40, 167, 69, 0.3)',
+                    transition: 'all 0.3s ease',
+                    animation: 'pulse 2s infinite'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'scale(1.05)';
+                    e.currentTarget.style.boxShadow = '0 6px 16px rgba(40, 167, 69, 0.4)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'scale(1)';
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(40, 167, 69, 0.3)';
+                  }}
+                >
+                  <i className="bi bi-hand-index-thumb-fill me-2"></i>
+                  Catch Block
+                </button>
+              )}
               <button 
                 type="button" 
                 className="btn btn-secondary" 
@@ -1601,6 +1807,23 @@ function QRScannerWebRTC({ onScan, onClose }) {
           </div>
         </div>
       </div>
+      
+      {/* CSS 애니메이션 스타일 */}
+      <style>{`
+        @keyframes pulse {
+          0%, 100% {
+            opacity: 1;
+            transform: scale(1);
+          }
+          50% {
+            opacity: 0.9;
+            transform: scale(1.02);
+          }
+        }
+        .catch-button-pulse {
+          animation: pulse 2s infinite;
+        }
+      `}</style>
       
       {/* QR 스캔 성공 모달 */}
       {showSuccessModal && (
