@@ -30,8 +30,9 @@ function QRScannerWebRTC({ onScan, onClose }) {
   const mouseRef = useRef(new THREE.Vector2());
   // 블록 회전 기능을 위한 ref 및 상태
   const touchStartRef = useRef({ x: 0, y: 0, isRotating: false, hasMoved: false, isActive: false });
-  const rotationSensitivity = 0.01; // 회전 감도 (조정 가능)
+  const rotationSensitivity = 0.006; // 회전 감도 (더 부드러운 회전을 위해 낮춤: 0.01 → 0.006)
   const clickThreshold = 10; // 클릭과 회전을 구분하는 픽셀 임계값
+  const lastDeltaRef = useRef({ x: 0, y: 0 }); // 부드러운 회전을 위한 이전 delta 값
   const [isRotating, setIsRotating] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [error, setError] = useState(null);
@@ -1153,9 +1154,9 @@ function QRScannerWebRTC({ onScan, onClose }) {
       }
       
       const touch = event.touches[0];
-      const deltaX = touch.clientX - touchStartRef.current.x;
-      const deltaY = touch.clientY - touchStartRef.current.y;
-      const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+      const rawDeltaX = touch.clientX - touchStartRef.current.x;
+      const rawDeltaY = touch.clientY - touchStartRef.current.y;
+      const distance = Math.sqrt(rawDeltaX * rawDeltaX + rawDeltaY * rawDeltaY);
 
       // 이동이 감지되면 hasMoved 플래그 설정 (클릭 방지)
       if (distance > 3) { // 3px 이상 이동하면 드래그로 간주
@@ -1168,18 +1169,28 @@ function QRScannerWebRTC({ onScan, onClose }) {
           touchStartRef.current.isRotating = true;
           setIsRotating(true);
           console.log('🔄 [QRScannerWebRTC] Rotation started');
+          // 회전 시작 시 이전 delta 초기화
+          lastDeltaRef.current = { x: 0, y: 0 };
         }
+
+        // 부드러운 회전을 위한 delta smoothing (이전 값과의 평균)
+        const smoothingFactor = 0.3; // 0~1 사이 값, 낮을수록 더 부드러움
+        const smoothedDeltaX = rawDeltaX * (1 - smoothingFactor) + lastDeltaRef.current.x * smoothingFactor;
+        const smoothedDeltaY = rawDeltaY * (1 - smoothingFactor) + lastDeltaRef.current.y * smoothingFactor;
 
         // 블록 회전 적용
         const block = blocksRef.current[0];
         if (block) {
-          // Y축 회전 (수평 드래그)
-          block.rotation.y += deltaX * rotationSensitivity;
+          // Y축 회전 (수평 드래그) - 부드러운 delta 사용
+          block.rotation.y += smoothedDeltaX * rotationSensitivity;
           
           // X축 회전 (수직 드래그) - 제한 적용
-          block.rotation.x += deltaY * rotationSensitivity;
+          block.rotation.x += smoothedDeltaY * rotationSensitivity;
           block.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, block.rotation.x));
         }
+
+        // 이전 delta 값 저장 (다음 프레임에서 smoothing에 사용)
+        lastDeltaRef.current = { x: smoothedDeltaX, y: smoothedDeltaY };
 
         // 시작점 업데이트 (상대적 회전을 위해)
         touchStartRef.current.x = touch.clientX;
@@ -1188,6 +1199,8 @@ function QRScannerWebRTC({ onScan, onClose }) {
         // 작은 이동도 시작점 업데이트 (누적 이동 거리 계산을 위해)
         touchStartRef.current.x = touch.clientX;
         touchStartRef.current.y = touch.clientY;
+        // 작은 이동 시 delta 초기화
+        lastDeltaRef.current = { x: 0, y: 0 };
       }
 
       event.preventDefault();
@@ -1202,6 +1215,7 @@ function QRScannerWebRTC({ onScan, onClose }) {
       
       // 회전 상태 초기화
       touchStartRef.current = { x: 0, y: 0, isRotating: false, hasMoved: false, isActive: false };
+      lastDeltaRef.current = { x: 0, y: 0 }; // delta 값도 초기화
       setIsRotating(false);
       
       // 클릭이 아니면 이벤트 전파 중지 (클릭 핸들러가 실행되지 않도록)
@@ -1237,9 +1251,9 @@ function QRScannerWebRTC({ onScan, onClose }) {
         return;
       }
       
-      const deltaX = event.clientX - touchStartRef.current.x;
-      const deltaY = event.clientY - touchStartRef.current.y;
-      const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+      const rawDeltaX = event.clientX - touchStartRef.current.x;
+      const rawDeltaY = event.clientY - touchStartRef.current.y;
+      const distance = Math.sqrt(rawDeltaX * rawDeltaX + rawDeltaY * rawDeltaY);
 
       // 이동이 감지되면 hasMoved 플래그 설정
       if (distance > 3) {
@@ -1251,14 +1265,24 @@ function QRScannerWebRTC({ onScan, onClose }) {
           touchStartRef.current.isRotating = true;
           setIsRotating(true);
           console.log('🔄 [QRScannerWebRTC] Rotation started (mouse)');
+          // 회전 시작 시 이전 delta 초기화
+          lastDeltaRef.current = { x: 0, y: 0 };
         }
+
+        // 부드러운 회전을 위한 delta smoothing (이전 값과의 평균)
+        const smoothingFactor = 0.3; // 0~1 사이 값, 낮을수록 더 부드러움
+        const smoothedDeltaX = rawDeltaX * (1 - smoothingFactor) + lastDeltaRef.current.x * smoothingFactor;
+        const smoothedDeltaY = rawDeltaY * (1 - smoothingFactor) + lastDeltaRef.current.y * smoothingFactor;
 
         const block = blocksRef.current[0];
         if (block) {
-          block.rotation.y += deltaX * rotationSensitivity;
-          block.rotation.x += deltaY * rotationSensitivity;
+          block.rotation.y += smoothedDeltaX * rotationSensitivity;
+          block.rotation.x += smoothedDeltaY * rotationSensitivity;
           block.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, block.rotation.x));
         }
+
+        // 이전 delta 값 저장 (다음 프레임에서 smoothing에 사용)
+        lastDeltaRef.current = { x: smoothedDeltaX, y: smoothedDeltaY };
 
         touchStartRef.current.x = event.clientX;
         touchStartRef.current.y = event.clientY;
@@ -1266,6 +1290,8 @@ function QRScannerWebRTC({ onScan, onClose }) {
         // 작은 이동도 시작점 업데이트
         touchStartRef.current.x = event.clientX;
         touchStartRef.current.y = event.clientY;
+        // 작은 이동 시 delta 초기화
+        lastDeltaRef.current = { x: 0, y: 0 };
       }
     };
 
@@ -1273,6 +1299,7 @@ function QRScannerWebRTC({ onScan, onClose }) {
       const wasClick = !touchStartRef.current.hasMoved && !touchStartRef.current.isRotating;
       console.log('🖱️ [QRScannerWebRTC] Mouse up:', { wasClick, hasMoved: touchStartRef.current.hasMoved, isRotating: touchStartRef.current.isRotating });
       touchStartRef.current = { x: 0, y: 0, isRotating: false, hasMoved: false, isActive: false };
+      lastDeltaRef.current = { x: 0, y: 0 }; // delta 값도 초기화
       setIsRotating(false);
       
       // 드래그였으면 클릭 이벤트 방지
