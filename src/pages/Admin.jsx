@@ -285,10 +285,20 @@ function Admin() {
     }
   };
 
-  // 카테고리별 블록 그룹화
+  // 어드민에서 숨길 블록 ID 목록 (항상 default로 처리, Studio에서만 사용)
+  const HIDDEN_BLOCK_IDS = [
+    'procedures_defreturn',  // function with return
+    'procedures_ifreturn',   // if return
+    'variables_set'          // set variable
+  ];
+  
+  // 카테고리별 블록 그룹화 (어드민에서 숨길 블록 제외)
   const groupBlocksByCategory = (blocks) => {
     const grouped = {};
-    blocks.forEach(block => {
+    // 어드민에서 숨길 블록 필터링
+    const visibleBlocks = blocks.filter(block => !HIDDEN_BLOCK_IDS.includes(block.id));
+    
+    visibleBlocks.forEach(block => {
       if (!grouped[block.category]) {
         grouped[block.category] = [];
       }
@@ -337,6 +347,25 @@ function Admin() {
     if (activeTab === 'blocks') {
       loadBlocks();
       loadQRCodes();
+      
+      // 전역 함수로 등록: 숨겨진 3개 블록을 default로 업데이트
+      if (typeof window !== 'undefined' && !window.updateHiddenBlocksToDefault) {
+        window.updateHiddenBlocksToDefault = async () => {
+          try {
+            const { updateHiddenBlocksToDefault } = await import('../utils/migrateBlocks');
+            const result = await updateHiddenBlocksToDefault();
+            console.log('✅ 업데이트 완료:', result);
+            // 블록 목록 다시 로드
+            await loadBlocks();
+            return result;
+          } catch (error) {
+            console.error('❌ 업데이트 실패:', error);
+            throw error;
+          }
+        };
+        console.log('✅ updateHiddenBlocksToDefault() 함수 등록 완료!');
+        console.log('사용 방법: 브라우저 콘솔에서 updateHiddenBlocksToDefault() 실행');
+      }
     }
   }, [activeTab]); // eslint-disable-line react-hooks/exhaustive-deps
   const handleCreateQR = async (e) => {
@@ -887,10 +916,10 @@ function Admin() {
                           <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
                         ) : (
                           <>
-                            {blocks.length} blocks
+                            {blocks.filter(b => !HIDDEN_BLOCK_IDS.includes(b.id)).length} blocks
                             {blocks.length > 0 && (
                               <span className="ms-2">
-                                (<span className="text-success">🔓 {blocks.filter(b => b.isDefaultBlock === true).length}</span>
+                                (<span className="text-success">🔓 {blocks.filter(b => b.isDefaultBlock === true && !HIDDEN_BLOCK_IDS.includes(b.id)).length}</span>
                                 {' / '}
                                 <span className="text-warning">🔒 {blocks.filter(b => b.isDefaultBlock === false).length}</span>)
                               </span>
@@ -1009,7 +1038,11 @@ function Admin() {
                               required
                             >
                               <option value="">Select a block...</option>
-                              {blocks.filter(b => !b.isDefaultBlock).map(block => (
+                              {blocks.filter(b => {
+                                // Default 블록은 제외하고, 숨길 블록도 제외
+                                const isHidden = HIDDEN_BLOCK_IDS.includes(b.id);
+                                return !b.isDefaultBlock && !isHidden;
+                              }).map(block => (
                                 <option key={block.id} value={block.id}>
                                   <i className={`${block.icon} me-1`}></i>
                                   {block.name} ({block.category})

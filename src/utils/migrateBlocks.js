@@ -52,12 +52,12 @@ export const INITIAL_BLOCKS = [
   
   // Variables (2개)
   { id: 'variables_get', name: 'get variable', category: 'Variables', icon: 'bi-box', isDefaultBlock: true },
-  { id: 'variables_set', name: 'set variable', category: 'Variables', icon: 'bi-box', isDefaultBlock: true },
+  { id: 'variables_set', name: 'set variable', category: 'Variables', icon: 'bi-box', isDefaultBlock: true }, // 항상 default, 어드민에서 숨김
   
   // Functions (3개)
   { id: 'procedures_defnoreturn', name: 'define function', category: 'Functions', icon: 'bi-gear', isDefaultBlock: false },
-  { id: 'procedures_defreturn', name: 'function with return', category: 'Functions', icon: 'bi-gear', isDefaultBlock: false },
-  { id: 'procedures_ifreturn', name: 'if return', category: 'Functions', icon: 'bi-gear', isDefaultBlock: false }
+  { id: 'procedures_defreturn', name: 'function with return', category: 'Functions', icon: 'bi-gear', isDefaultBlock: true }, // 항상 default, 어드민에서 숨김
+  { id: 'procedures_ifreturn', name: 'if return', category: 'Functions', icon: 'bi-gear', isDefaultBlock: true } // 항상 default, 어드민에서 숨김
 ];
 
 /**
@@ -238,13 +238,54 @@ export const updateBlockSetting = async (blockId, isDefaultBlock) => {
   }
 };
 
+/**
+ * 특정 3개 블록을 default로 설정 (어드민에서 숨김 처리용)
+ * - procedures_defreturn
+ * - procedures_ifreturn
+ * - variables_set
+ */
+export const updateHiddenBlocksToDefault = async () => {
+  const hiddenBlockIds = ['procedures_defreturn', 'procedures_ifreturn', 'variables_set'];
+  
+  console.log('🔄 Updating 3 hidden blocks to default...');
+  let successCount = 0;
+  let errorCount = 0;
+  const errors = [];
+  
+  for (const blockId of hiddenBlockIds) {
+    try {
+      const blockRef = doc(db, 'blocks', blockId);
+      await setDoc(blockRef, {
+        isDefaultBlock: true,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+      
+      successCount++;
+      console.log(`✅ Updated ${blockId} to default`);
+    } catch (error) {
+      errorCount++;
+      errors.push({ blockId, error: error.message });
+      console.error(`❌ Failed to update ${blockId}:`, error);
+    }
+  }
+  
+  console.log(`\n📊 Update Summary: ${successCount} success, ${errorCount} failed`);
+  return {
+    success: errorCount === 0,
+    successCount,
+    errorCount,
+    errors
+  };
+};
+
 // 기본 내보내기
 const migrateBlocksModule = {
   INITIAL_BLOCKS,
   migrateBlocksToFirestore,
   migrateBlocksToFirestoreWithProgress,
   verifyBlocksInFirestore,
-  updateBlockSetting
+  updateBlockSetting,
+  updateHiddenBlocksToDefault
 };
 
 export default migrateBlocksModule;

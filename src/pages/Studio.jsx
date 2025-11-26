@@ -4,6 +4,7 @@ import AppBar from '../components/AppBar';
 import TabBar from '../components/TabBar';
 import { useAuth } from '../contexts/AuthContext';
 import { saveSubmission, getBlocks, getUserProfile } from '../firebase/firestore';
+import { downloadMissingBlocks } from '../utils/testBlockSvgExport';
 
 const LS_KEY = 'BlockHunt_workspace_v2';
 
@@ -247,6 +248,17 @@ function Studio() {
       renderer: 'zelos',
       zoom: { controls: true, wheel: true }
     });
+
+    // 전역 함수로 등록: 누락된 3개 블록 SVG 다운로드
+    // 브라우저 콘솔에서 downloadMissingBlocks() 호출 가능
+    if (typeof window !== 'undefined' && !window.downloadMissingBlocks) {
+      // workspace ref를 전역으로 노출 (downloadMissingBlocks에서 사용)
+      window.workspaceRef = workspaceRef;
+      
+      window.downloadMissingBlocks = downloadMissingBlocks;
+      console.log('✅ SVG 다운로드 함수 등록 완료!');
+      console.log('사용 방법: 브라우저 콘솔에서 downloadMissingBlocks() 실행');
+    }
 
     onResize();
 

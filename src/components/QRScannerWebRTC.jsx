@@ -48,6 +48,7 @@ function QRScannerWebRTC({ onScan, onClose }) {
   const [qrScanned, setQrScanned] = useState(false);
   const [debugInfo, setDebugInfo] = useState(null); // 디버깅 정보 상태
   const [showDebugPanel, setShowDebugPanel] = useState(false); // 디버그 패널 표시 여부
+  const [blockLoadError, setBlockLoadError] = useState(null); // 블록 로드 에러 상태
 
   // 카메라 스트림 정리
   const stopCamera = useCallback(() => {
@@ -640,10 +641,15 @@ function QRScannerWebRTC({ onScan, onClose }) {
             const gltfPath = getBlockGLTFPath(blockIdToLoad);
             const loader = new GLTFLoader();
             
+            // 에러 상태 초기화
+            setBlockLoadError(null);
+            
             console.log(`📦 [QRScannerWebRTC] Loading ${blockIdToLoad}.gltf from ${gltfPath}...`);
             loader.load(
               gltfPath,
               (gltf) => {
+                // 성공 시 에러 상태 초기화
+                setBlockLoadError(null);
                 console.log(`✅ [QRScannerWebRTC] ${blockIdToLoad}.gltf loaded successfully`);
                 const model = gltf.scene.clone(); // 클론하여 사용
                 
@@ -751,13 +757,38 @@ function QRScannerWebRTC({ onScan, onClose }) {
               },
               (error) => {
                 console.error(`❌ [QRScannerWebRTC] Error loading ${blockIdToLoad}.gltf:`, error);
-                // 에러 발생 시 기본 블록 생성
+                console.error(`❌ [QRScannerWebRTC] GLTF file not found: /block_gltf/${blockIdToLoad}.gltf`);
+                
+                // 블록 정보 가져오기
+                const blockInfo = blocksDataRef.current.find(b => b.id === blockIdToLoad);
+                const blockName = blockInfo ? blockInfo.name : blockIdToLoad;
+                
+                // 에러 상태 설정
+                setBlockLoadError({
+                  blockId: blockIdToLoad,
+                  blockName: blockName,
+                  gltfPath: `/block_gltf/${blockIdToLoad}.gltf`,
+                  message: `GLTF file not found: ${blockIdToLoad}.gltf`
+                });
+                
+                // 디버깅 정보 업데이트
+                setDebugInfo(prev => ({
+                  ...prev,
+                  error: {
+                    message: `GLTF file not found for block: ${blockIdToLoad}`,
+                    blockName: blockName,
+                    gltfPath: `/block_gltf/${blockIdToLoad}.gltf`,
+                    errorDetails: error.message || error.toString()
+                  }
+                }));
+                
+                // 에러 발생 시 기본 블록 생성 (사용자에게 시각적 피드백 제공)
                 if (sceneRef.current && cameraRef.current) {
                   const geometry = new THREE.BoxGeometry(0.3, 0.3, 0.3);
                   const material = new THREE.MeshBasicMaterial({ 
-                    color: 0x5CA65C,
+                    color: 0xff6b6b, // 빨간색으로 변경하여 에러임을 표시
                     transparent: true,
-                    opacity: 0.9,
+                    opacity: 0.8,
                     side: THREE.DoubleSide
                   });
                   const fallbackBlock = new THREE.Mesh(geometry, material);
@@ -766,11 +797,15 @@ function QRScannerWebRTC({ onScan, onClose }) {
                   fallbackBlock.userData = {
                     clickable: true,
                     isQRBlock: true,
-                    blockId: blockIdToLoad
+                    blockId: blockIdToLoad,
+                    isErrorBlock: true, // 에러 블록임을 표시
+                    errorMessage: `GLTF file missing: ${blockIdToLoad}.gltf`
                   };
                   sceneRef.current.add(fallbackBlock);
                   blocksRef.current = [fallbackBlock];
-                  console.log('✅ [QRScannerWebRTC] Fallback block created');
+                  console.warn(`⚠️ [QRScannerWebRTC] Fallback error block created for missing GLTF: ${blockIdToLoad}`);
+                  console.warn(`⚠️ [QRScannerWebRTC] Block name: ${blockName}`);
+                  console.warn(`⚠️ [QRScannerWebRTC] Please add GLTF file: /block_gltf/${blockIdToLoad}.gltf`);
                 }
               }
             );
@@ -1844,6 +1879,27 @@ function QRScannerWebRTC({ onScan, onClose }) {
               }}
             >
               {/* 캐치 버튼 - QR 스캔 완료 후 블록이 표시될 때만 표시 */}
+              {/* 블록 로드 에러 알림 */}
+              {blockLoadError && (
+                <div className="alert alert-warning alert-dismissible fade show mb-3" role="alert">
+                  <i className="bi bi-exclamation-triangle-fill me-2"></i>
+                  <strong>블록 모델 파일을 찾을 수 없습니다:</strong>
+                  <div className="small mt-1">
+                    블록: <code>{blockLoadError.blockName || blockLoadError.blockId}</code>
+                    <br />
+                    파일 경로: <code>{blockLoadError.gltfPath}</code>
+                    <br />
+                    <span className="text-muted">GLTF 파일이 없어 기본 블록이 표시됩니다.</span>
+                  </div>
+                  <button 
+                    type="button" 
+                    className="btn-close" 
+                    onClick={() => setBlockLoadError(null)}
+                    aria-label="Close"
+                  ></button>
+                </div>
+              )}
+              
               {qrScanned && blocksRef.current.length > 0 && (
                 <button 
                   type="button" 
