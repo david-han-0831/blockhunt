@@ -384,6 +384,43 @@ function Studio() {
     URL.revokeObjectURL(url);
   };
 
+  // Reset workspace to initial state
+  const resetWorkspace = () => {
+    if (!workspaceRef.current) return;
+    
+    // 1. Blockly 워크스페이스를 초기 상태로 되돌리기
+    seedWorkspace(workspaceRef.current);
+    
+    // 2. Python 코드 초기화
+    setPyCode('');
+    
+    // 3. 콘솔 출력 초기화
+    setConsoleOutput('(no output)');
+    
+    // 4. localStorage의 워크스페이스 저장 데이터를 초기 상태로 저장
+    const seedState = {
+      blocks: {
+        languageVersion: 0,
+        blocks: [
+          {
+            type: 'text_print',
+            x: 30,
+            y: 30,
+            inputs: {
+              TEXT: {
+                shadow: {
+                  type: 'text',
+                  fields: { TEXT: 'Hello BlockHunt!' }
+                }
+              }
+            }
+          }
+        ]
+      }
+    };
+    localStorage.setItem(LS_KEY, JSON.stringify(seedState));
+  };
+
   const handleSubmit = async () => {
     if (!currentUser) {
       showToast('Login required.');
@@ -426,6 +463,9 @@ function Studio() {
       if (result.success) {
         showToast('✅ Submission completed!');
         console.log('[Submit] Submission ID:', result.id);
+        
+        // 서밋 성공 후 화면 초기화
+        resetWorkspace();
       } else {
         showToast('❌ Submission failed: ' + (result.error || 'Unknown error'));
         console.error('[Submit] Error:', result.error);
