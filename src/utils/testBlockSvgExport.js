@@ -324,9 +324,6 @@ export async function testSingleBlock(blockType = 'text_print', workspace = null
     if (!path || !path.getAttribute('d') || path.getAttribute('d').length === 0) {
       console.warn(`⚠️ 블록 "${blockType}"의 경로가 없습니다. 경로 생성 시도...`);
       
-      // 블록의 크기 가져오기
-      const hw = block.getHeightWidth ? block.getHeightWidth() : { width: 200, height: 100 };
-      
       // 경로가 없으면 생성 시도
       if (block.render) {
         block.render();

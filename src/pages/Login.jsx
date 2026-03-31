@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { loginUser, updateUserPassword } from '../firebase/auth';
+import { loginUser } from '../firebase/auth';
 import { findUserByEmailAndUsername } from '../firebase/firestore';
 import { useAuth } from '../contexts/AuthContext';
 import AppBar from '../components/AppBar';
