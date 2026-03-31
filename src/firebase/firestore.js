@@ -11,6 +11,7 @@ import {
   where,
   orderBy,
   arrayUnion,
+  increment,
   limit
 } from 'firebase/firestore';
 import { db } from './firebaseConfig';
@@ -119,6 +120,14 @@ export const saveSubmission = async (uid, questionId, data) => {
       status: 'pending',
       submittedAt: new Date().toISOString()
     });
+
+    // 제출 통계: 동일 문제 재제출은 solved에서 1회로 계산하기 위해 문제 ID를 유니크 배열로 관리
+    await setDoc(doc(db, 'users', uid), {
+      submittedQuestionIds: arrayUnion(questionId),
+      submissionCount: increment(1),
+      updatedAt: new Date().toISOString()
+    }, { merge: true });
+
     return { success: true, id: submissionRef.id };
   } catch (error) {
     return { success: false, error: error.message };
@@ -163,17 +172,35 @@ export const getWorkspaceDraft = async (uid, questionId) => {
 // 사용자의 제출물 목록 가져오기
 export const getUserSubmissions = async (uid) => {
   try {
-    const q = query(
-      collection(db, 'submissions'),
-      where('userId', '==', uid),
-      orderBy('submittedAt', 'desc')
-    );
-    
-    const querySnapshot = await getDocs(q);
+    let querySnapshot;
+    try {
+      // 기본: 최신순 정렬 조회 (인덱스 필요 가능)
+      const q = query(
+        collection(db, 'submissions'),
+        where('userId', '==', uid),
+        orderBy('submittedAt', 'desc')
+      );
+      querySnapshot = await getDocs(q);
+    } catch (orderedQueryError) {
+      // fallback: 인덱스 없이 userId 조건만으로 조회 후 클라이언트 정렬
+      const fallbackQuery = query(
+        collection(db, 'submissions'),
+        where('userId', '==', uid)
+      );
+      querySnapshot = await getDocs(fallbackQuery);
+    }
+
     const submissions = [];
     
     querySnapshot.forEach((doc) => {
       submissions.push({ id: doc.id, ...doc.data() });
+    });
+
+    // fallback 쿼리에서도 동일한 반환 포맷을 유지하기 위해 클라이언트에서 정렬
+    submissions.sort((a, b) => {
+      const aTime = a.submittedAt ? new Date(a.submittedAt).getTime() : 0;
+      const bTime = b.submittedAt ? new Date(b.submittedAt).getTime() : 0;
+      return bTime - aTime;
     });
     
     return { success: true, data: submissions };

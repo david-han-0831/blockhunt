@@ -644,18 +644,12 @@ export async function downloadMissingBlocks() {
     'variables_set'          // set variable
   ];
   
-  console.log('🔄 누락된 3개 블록 SVG 다운로드 시작...');
-  console.log('블록 목록:', missingBlocks);
-  
   // Studio 페이지의 workspace를 사용하려고 시도
   let workspace = null;
   
   // React 컴포넌트의 workspace ref를 찾기
   if (window.workspaceRef && window.workspaceRef.current) {
     workspace = window.workspaceRef.current;
-    console.log('✅ Studio 페이지의 workspace 사용');
-  } else {
-    console.log('⚠️ Studio workspace를 찾을 수 없어 임시 workspace를 생성합니다');
   }
   
   return await testMultipleBlocks(missingBlocks, workspace);
@@ -668,12 +662,6 @@ if (typeof window !== 'undefined') {
   window.testBlockSvg = testSingleBlock;
   window.testMultipleBlockSvgs = testMultipleBlocks;
   window.downloadMissingBlocks = downloadMissingBlocks;
-  
-  console.log('✅ 테스트 함수 등록 완료!');
-  console.log('사용 방법:');
-  console.log('  - testBlockSvg("text_print")  // 단일 블록 테스트');
-  console.log('  - testMultipleBlockSvgs(["text_print", "math_number"])  // 여러 블록 테스트');
-  console.log('  - downloadMissingBlocks()  // 누락된 3개 블록만 다운로드');
 }
 
 

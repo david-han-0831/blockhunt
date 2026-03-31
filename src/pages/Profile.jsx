@@ -4,7 +4,7 @@ import AppBar from '../components/AppBar';
 import TabBar from '../components/TabBar';
 import QRScannerWebRTC from '../components/QRScannerWebRTC';
 import { useAuth } from '../contexts/AuthContext';
-import { getUserProfile, processQRScan, getBlocks, removeCollectedBlock, getUserSubmissions, getQuestions } from '../firebase/firestore';
+import { getUserProfile, processQRScan, getBlocks, removeCollectedBlock, getQuestions, getUserSubmissions } from '../firebase/firestore';
 import useToast from '../hooks/useToast';
 import useAdminAuth from '../hooks/useAdminAuth';
 
@@ -64,6 +64,28 @@ function Profile() {
         const collectedBlocks = userData.collectedBlocks || [];
         console.log('📦 Collected blocks from Firebase:', collectedBlocks);
         setCollected(new Set(collectedBlocks));
+
+        // Solved는 제출 기준: 같은 문제를 여러 번 제출해도 1번으로 계산
+        const submittedQuestionIds = userData.submittedQuestionIds || [];
+        if (submittedQuestionIds.length > 0) {
+          const uniqueSolvedIds = new Set(submittedQuestionIds.filter(Boolean));
+          setSolvedCount(uniqueSolvedIds.size);
+          setAttemptCount(userData.submissionCount || submittedQuestionIds.length || 0);
+        } else {
+          // 과거 데이터 호환: user 문서에 집계 필드가 없으면 submissions에서 fallback 계산
+          const submissionsResult = await getUserSubmissions(currentUser.uid);
+          if (submissionsResult.success) {
+            const submissions = submissionsResult.data || [];
+            const uniqueSolvedIds = new Set(
+              submissions.map(submission => submission.questionId).filter(Boolean)
+            );
+            setSolvedCount(uniqueSolvedIds.size);
+            setAttemptCount(submissions.length);
+          } else {
+            setSolvedCount(0);
+            setAttemptCount(0);
+          }
+        }
       } else {
         console.log('⚠️ Firebase profile not found, loading from localStorage');
         // Firebase 프로필이 없으면 localStorage에서 로드
@@ -74,6 +96,8 @@ function Profile() {
         const savedBlocks = JSON.parse(localStorage.getItem('BlockHunt_collected_set') || '[]');
         console.log('💾 Collected blocks from localStorage:', savedBlocks);
         setCollected(new Set(savedBlocks));
+        setSolvedCount(0);
+        setAttemptCount(0);
       }
     } catch (err) {
       console.error('Failed to load user data:', err);
@@ -85,6 +109,8 @@ function Profile() {
       const savedBlocks = JSON.parse(localStorage.getItem('BlockHunt_collected_set') || '[]');
       console.log('💾 Error fallback - blocks from localStorage:', savedBlocks);
       setCollected(new Set(savedBlocks));
+      setSolvedCount(0);
+      setAttemptCount(0);
     }
   }, [currentUser]);
 
@@ -109,29 +135,9 @@ function Profile() {
     }
   }, []);
 
-  const loadSubmissionStats = useCallback(async () => {
-    if (!currentUser) return;
+  const loadQuestionStats = useCallback(async () => {
     try {
-      const [submissionsResult, questionsResult] = await Promise.all([
-        getUserSubmissions(currentUser.uid),
-        getQuestions()
-      ]);
-
-      if (submissionsResult.success) {
-        const submissions = submissionsResult.data || [];
-        setAttemptCount(submissions.length);
-
-        const uniqueQuestionIds = new Set(
-          submissions
-            .map(submission => submission.questionId)
-            .filter(Boolean)
-        );
-        setSolvedCount(uniqueQuestionIds.size);
-      } else {
-        setAttemptCount(0);
-        setSolvedCount(0);
-      }
-
+      const questionsResult = await getQuestions();
       if (questionsResult.success) {
         setTotalChallenges((questionsResult.data || []).length);
       } else {
@@ -143,15 +149,15 @@ function Profile() {
       setSolvedCount(0);
       setTotalChallenges(0);
     }
-  }, [currentUser]);
+  }, []);
 
   useEffect(() => {
     if (currentUser) {
       loadUserData();
       loadBlocks();
-      loadSubmissionStats();
+      loadQuestionStats();
     }
-  }, [currentUser, loadUserData, loadBlocks, loadSubmissionStats]);
+  }, [currentUser, loadUserData, loadBlocks, loadQuestionStats]);
 
   const getCatClass = (cat) => {
     const catMap = {
