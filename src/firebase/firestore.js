@@ -125,6 +125,41 @@ export const saveSubmission = async (uid, questionId, data) => {
   }
 };
 
+// 워크스페이스 저장 (수동 Save / 자동 Save 공용)
+// 같은 사용자-문제 조합은 하나의 문서를 덮어쓰기(upsert)합니다.
+export const saveWorkspaceDraft = async (uid, questionId, data) => {
+  try {
+    const draftId = `${uid}_${questionId}`;
+    const draftRef = doc(db, 'workspaceDrafts', draftId);
+    await setDoc(draftRef, {
+      userId: uid,
+      questionId,
+      code: data.code || '',
+      workspaceState: data.workspaceState || null,
+      saveType: data.saveType || 'manual',
+      updatedAt: new Date().toISOString()
+    }, { merge: true });
+    return { success: true, id: draftId };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};
+
+// 워크스페이스 임시저장 불러오기
+export const getWorkspaceDraft = async (uid, questionId) => {
+  try {
+    const draftId = `${uid}_${questionId}`;
+    const draftRef = doc(db, 'workspaceDrafts', draftId);
+    const draftSnap = await getDoc(draftRef);
+    if (!draftSnap.exists()) {
+      return { success: false, error: 'Workspace draft not found' };
+    }
+    return { success: true, data: draftSnap.data() };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};
+
 // 사용자의 제출물 목록 가져오기
 export const getUserSubmissions = async (uid) => {
   try {
@@ -339,36 +374,83 @@ export const updateBlockSettings = async (blockId, settings) => {
 
 /**
  * QR 코드 생성 (Admin) - 하나의 블록만 포함
- * @param {object} qrData - { name, block, isActive, startDate, endDate, createdBy }
+ * 
+ * 이 함수는 관리자가 QR 코드를 생성할 때 사용됩니다.
+ * QR 코드에는 블록 ID가 포함되며, 사용자가 스캔하면 해당 블록을 수집할 수 있습니다.
+ * 
+ * @param {object} qrData - QR 코드 데이터
+ * @param {string} qrData.name - QR 코드 이름 (관리용)
+ * @param {string} qrData.block - 블록 ID (예: "controls_if")
+ * @param {boolean} qrData.isActive - 활성화 여부 (기본값: true)
+ * @param {string} qrData.startDate - 시작 날짜 (ISO 8601 형식)
+ * @param {string} qrData.endDate - 종료 날짜 (null이면 무제한)
+ * @param {string} qrData.createdBy - 생성자 UID
+ * 
+ * @returns {Promise<{success: boolean, id?: string, qrData?: string, error?: string}>}
+ * 
+ * 동작 과정:
+ * 1. QR 페이로드 생성 (JSON 형식)
+ * 2. Firestore에 QR 코드 문서 생성
+ * 3. 생성된 문서 ID를 페이로드에 추가
+ * 4. 페이로드를 JSON 문자열로 변환하여 반환
+ * 
+ * QR 페이로드 형식:
+ * {
+ *   "type": "blockhunt_blocks",  // QR 코드 타입 (검증용)
+ *   "block": "controls_if",      // 블록 ID
+ *   "qrId": "생성된_문서_ID",     // Firestore 문서 ID
+ *   "timestamp": "2025-01-27T..." // 생성 시간
+ * }
+ * 
+ * 사용 예시:
+ * const result = await createQRCode({
+ *   name: "Logic Block QR",
+ *   block: "controls_if",
+ *   isActive: true,
+ *   createdBy: currentUser.uid
+ * });
+ * 
+ * if (result.success) {
+ *   // result.qrData를 QR 코드 생성 라이브러리(qrcode 등)에 전달
+ *   // QR 코드 이미지 생성 후 출력/저장
+ * }
  */
 export const createQRCode = async (qrData) => {
   try {
-    // QR에 담을 페이로드 생성 (단일 블록)
+    // 1단계: QR에 담을 페이로드 생성 (단일 블록)
+    // 이 페이로드는 QR 코드에 인코딩되어 사용자가 스캔하면 읽을 수 있습니다.
     const qrPayload = {
-      type: 'blockhunt_blocks',
-      block: qrData.block, // 단일 블록 ID
-      qrId: '', // 생성 후 업데이트
-      timestamp: new Date().toISOString()
+      type: 'blockhunt_blocks',  // QR 코드 타입 식별자 (검증용)
+      block: qrData.block,        // 단일 블록 ID (사용자가 수집할 블록)
+      qrId: '',                   // 아직 생성되지 않았으므로 빈 문자열 (나중에 업데이트)
+      timestamp: new Date().toISOString() // 생성 시간 (ISO 8601 형식)
     };
 
+    // 2단계: Firestore에 QR 코드 문서 생성
+    // addDoc을 사용하면 자동으로 고유한 문서 ID가 생성됩니다.
     const docRef = await addDoc(collection(db, 'qrCodes'), {
-      name: qrData.name,
-      block: qrData.block, // 단일 블록 ID
-      qrData: JSON.stringify(qrPayload),
-      isActive: qrData.isActive !== false,
-      startDate: qrData.startDate || new Date().toISOString(),
-      endDate: qrData.endDate || null,
-      createdBy: qrData.createdBy,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      name: qrData.name,                    // QR 코드 이름 (관리용)
+      block: qrData.block,                  // 단일 블록 ID
+      qrData: JSON.stringify(qrPayload),    // 페이로드를 JSON 문자열로 저장
+      isActive: qrData.isActive !== false,  // 기본값: true (활성화)
+      startDate: qrData.startDate || new Date().toISOString(), // 시작 날짜
+      endDate: qrData.endDate || null,      // 종료 날짜 (null이면 무제한)
+      createdBy: qrData.createdBy,          // 생성자 UID
+      createdAt: new Date().toISOString(),  // 생성 시간
+      updatedAt: new Date().toISOString()   // 업데이트 시간
     });
 
-    // QR ID를 페이로드에 추가
+    // 3단계: 생성된 문서 ID를 페이로드에 추가
+    // 이 ID는 나중에 QR 코드 검증 시 사용됩니다.
     qrPayload.qrId = docRef.id;
+    
+    // 4단계: 업데이트된 페이로드를 Firestore에 다시 저장
     await updateDoc(docRef, {
       qrData: JSON.stringify(qrPayload)
     });
 
+    // 5단계: 성공 응답 반환
+    // qrData는 QR 코드 생성 라이브러리(qrcode 등)에 전달할 수 있는 JSON 문자열입니다.
     return { 
       success: true, 
       id: docRef.id, 
@@ -470,20 +552,54 @@ export const createTestQRCode = async () => {
 
 /**
  * QR 스캔 처리 (User) - 단일 블록 처리
- * @param {string} uid - 사용자 UID
+ * 
+ * 사용자가 QR 코드를 스캔하면 이 함수가 호출되어 블록을 수집합니다.
+ * 
+ * @param {string} uid - 사용자 UID (Firebase Auth에서 가져온 사용자 ID)
  * @param {string} qrData - QR 코드에서 읽은 JSON 문자열
+ * 
+ * @returns {Promise<{success: boolean, alreadyCollected?: boolean, blocksObtained?: string[], totalBlocks?: number, error?: string}>}
+ * 
+ * 동작 과정:
+ * 1. QR 데이터 파싱 (JSON 문자열 → 객체)
+ * 2. QR 타입 검증 (blockhunt_blocks인지 확인)
+ * 3. QR 코드 정보 확인 (Firestore에서 조회)
+ * 4. 사용자 프로필 확인/생성
+ * 5. 블록 중복 체크 (이미 수집한 블록인지 확인)
+ * 6. 블록 추가 (collectedBlocks 배열에 추가)
+ * 7. 스캔 기록 저장 (qrScanHistory에 추가)
+ * 
+ * 에러 처리:
+ * - Invalid QR code format: JSON 파싱 실패
+ * - Invalid QR code type: type이 "blockhunt_blocks"가 아님
+ * - QR code not found: Firestore에 QR 코드가 없음
+ * - This QR code is no longer active: QR 코드가 비활성화됨
+ * - You already have this block!: 이미 수집한 블록
+ * 
+ * 사용 예시:
+ * const result = await processQRScan(currentUser.uid, scannedQRData);
+ * if (result.success) {
+ *   if (result.alreadyCollected) {
+ *     console.log('이미 수집한 블록입니다.');
+ *   } else {
+ *     console.log('블록 수집 성공!', result.blocksObtained);
+ *   }
+ * }
  */
 export const processQRScan = async (uid, qrData) => {
   try {
-    // QR 데이터 파싱
+    // 1단계: QR 데이터 파싱
+    // QR 코드는 JSON 문자열로 인코딩되어 있으므로 파싱이 필요합니다.
     let payload;
     try {
       payload = JSON.parse(qrData);
     } catch {
+      // JSON 파싱 실패 시 에러 반환
       return { success: false, error: 'Invalid QR code format' };
     }
     
-    // QR 타입 검증
+    // 2단계: QR 타입 검증
+    // type이 "blockhunt_blocks"가 아니면 유효하지 않은 QR 코드입니다.
     if (payload.type !== 'blockhunt_blocks') {
       return { success: false, error: 'Invalid QR code type' };
     }

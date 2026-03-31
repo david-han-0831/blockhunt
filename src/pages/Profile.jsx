@@ -4,7 +4,7 @@ import AppBar from '../components/AppBar';
 import TabBar from '../components/TabBar';
 import QRScannerWebRTC from '../components/QRScannerWebRTC';
 import { useAuth } from '../contexts/AuthContext';
-import { getUserProfile, processQRScan, getBlocks, removeCollectedBlock } from '../firebase/firestore';
+import { getUserProfile, processQRScan, getBlocks, removeCollectedBlock, getUserSubmissions, getQuestions } from '../firebase/firestore';
 import useToast from '../hooks/useToast';
 import useAdminAuth from '../hooks/useAdminAuth';
 
@@ -27,6 +27,9 @@ function Profile() {
   const [showScanner, setShowScanner] = useState(false);
   const [blocks, setBlocks] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [solvedCount, setSolvedCount] = useState(0);
+  const [attemptCount, setAttemptCount] = useState(0);
+  const [totalChallenges, setTotalChallenges] = useState(0);
   
   const { currentUser } = useAuth();
   const { success, error } = useToast();
@@ -85,15 +88,8 @@ function Profile() {
     }
   }, [currentUser]);
 
-  useEffect(() => {
-    if (currentUser) {
-      loadUserData();
-      loadBlocks();
-    }
-  }, [currentUser, loadUserData]);
-
   // 블록 카탈로그 로드
-  const loadBlocks = async () => {
+  const loadBlocks = useCallback(async () => {
     try {
       console.log('🔄 Loading blocks catalog...');
       const result = await getBlocks();
@@ -104,7 +100,6 @@ function Profile() {
         setBlocks(result.data);
       } else {
         console.log('⚠️ Firebase blocks failed, using default catalog');
-        // Firebase에서 로드 실패 시 기본 카탈로그 사용
         setBlocks(BLOCK_CATALOG);
       }
     } catch (err) {
@@ -112,7 +107,51 @@ function Profile() {
       console.log('💾 Error fallback - using default catalog');
       setBlocks(BLOCK_CATALOG);
     }
-  };
+  }, []);
+
+  const loadSubmissionStats = useCallback(async () => {
+    if (!currentUser) return;
+    try {
+      const [submissionsResult, questionsResult] = await Promise.all([
+        getUserSubmissions(currentUser.uid),
+        getQuestions()
+      ]);
+
+      if (submissionsResult.success) {
+        const submissions = submissionsResult.data || [];
+        setAttemptCount(submissions.length);
+
+        const uniqueQuestionIds = new Set(
+          submissions
+            .map(submission => submission.questionId)
+            .filter(Boolean)
+        );
+        setSolvedCount(uniqueQuestionIds.size);
+      } else {
+        setAttemptCount(0);
+        setSolvedCount(0);
+      }
+
+      if (questionsResult.success) {
+        setTotalChallenges((questionsResult.data || []).length);
+      } else {
+        setTotalChallenges(0);
+      }
+    } catch (err) {
+      console.error('Failed to load submission stats:', err);
+      setAttemptCount(0);
+      setSolvedCount(0);
+      setTotalChallenges(0);
+    }
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (currentUser) {
+      loadUserData();
+      loadBlocks();
+      loadSubmissionStats();
+    }
+  }, [currentUser, loadUserData, loadBlocks, loadSubmissionStats]);
 
   const getCatClass = (cat) => {
     const catMap = {
@@ -261,6 +300,8 @@ function Profile() {
   // Collected Count: QR Required 블록 중 수집한 블록만 카운트
   const collectedCount = qrRequiredBlocks.filter(block => collected.has(block.id)).length;
   const collectedPercent = totalBlocks > 0 ? Math.round((collectedCount / totalBlocks) * 100) : 0;
+  const solvedPercent = totalChallenges > 0 ? Math.round((solvedCount / totalChallenges) * 100) : 0;
+  const successRate = attemptCount > 0 ? Math.round((solvedCount / attemptCount) * 100) : 0;
 
   return (
     <>
@@ -311,17 +352,17 @@ function Profile() {
             <div className="k">
               <i className="bi bi-list-task"></i>Solved
             </div>
-            <div className="v">0</div>
+            <div className="v">{solvedCount}</div>
             <div className="progress">
-              <div className="progress-bar" style={{ width: '0%' }}></div>
+              <div className="progress-bar" style={{ width: `${solvedPercent}%` }}></div>
             </div>
-            <div className="muted">0 of 0 challenges</div>
+            <div className="muted">{solvedCount} of {totalChallenges} challenges</div>
           </div>
           <div className="stat">
             <div className="k">
               <i className="bi bi-graph-up"></i>Success Rate
             </div>
-            <div className="v">0%</div>
+            <div className="v">{successRate}%</div>
             <div className="muted">Solved / Attempts</div>
           </div>
         </section>

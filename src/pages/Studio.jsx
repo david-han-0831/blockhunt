@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import AppBar from '../components/AppBar';
 import TabBar from '../components/TabBar';
 import { useAuth } from '../contexts/AuthContext';
-import { saveSubmission, getBlocks, getUserProfile } from '../firebase/firestore';
+import { saveSubmission, getBlocks, getUserProfile, saveWorkspaceDraft, getWorkspaceDraft } from '../firebase/firestore';
 import { downloadMissingBlocks } from '../utils/testBlockSvgExport';
 
 const LS_KEY = 'BlockHunt_workspace_v2';
@@ -144,6 +144,7 @@ function Studio() {
   const blocklyDivRef = useRef(null);
   const workspaceRef = useRef(null);
   const pyodideRef = useRef(null);
+  const isDraftSavingRef = useRef(false);
   
   const [pyCode, setPyCode] = useState('');
   const [consoleOutput, setConsoleOutput] = useState('(no output)');
@@ -154,6 +155,22 @@ function Studio() {
   const [collectedBlocks, setCollectedBlocks] = useState([]);
   const [allBlocks, setAllBlocks] = useState([]);
   const [blocksLoaded, setBlocksLoaded] = useState(false);
+
+  const getCurrentQuestionInfo = () => {
+    let questionId = 'default-question';
+    let questionBody = questionText;
+    try {
+      const saved = localStorage.getItem('BlockHunt_current_question');
+      if (saved) {
+        const q = JSON.parse(saved);
+        questionId = q.id || 'default-question';
+        questionBody = q.body || questionText;
+      }
+    } catch (e) {
+      console.error('Failed to load current question info:', e);
+    }
+    return { questionId, questionBody };
+  };
 
   // Load blocks from API
   useEffect(() => {
@@ -203,15 +220,8 @@ function Studio() {
     }
 
     // Load saved question
-    const saved = localStorage.getItem('BlockHunt_current_question');
-    if (saved) {
-      try {
-        const q = JSON.parse(saved);
-        setQuestionText(q.body || questionText);
-      } catch (e) {
-        console.error('Failed to load question:', e);
-      }
-    }
+    const { questionBody } = getCurrentQuestionInfo();
+    setQuestionText(questionBody);
 
     // Wait for Blockly to be available
     if (!window.Blockly) {
@@ -347,12 +357,46 @@ function Studio() {
     setTimeout(() => toast.remove(), 1400);
   };
 
+  const saveWorkspaceSnapshot = async ({ showMessage = false, saveType = 'manual' } = {}) => {
+    if (!currentUser || !workspaceRef.current || isDraftSavingRef.current) return false;
+
+    isDraftSavingRef.current = true;
+    try {
+      const { questionId } = getCurrentQuestionInfo();
+      const state = window.Blockly.serialization.workspaces.save(workspaceRef.current);
+      const code = getPython();
+
+      // 로컬에도 저장해 오프라인 복구를 유지하고, Firestore에도 저장합니다.
+      localStorage.setItem(LS_KEY, JSON.stringify(state));
+
+      const result = await saveWorkspaceDraft(currentUser.uid, questionId, {
+        code,
+        workspaceState: state,
+        saveType
+      });
+
+      if (!result.success) {
+        if (showMessage) showToast('❌ Save failed.');
+        console.error('[Save] Draft save failed:', result.error);
+        return false;
+      }
+
+      if (showMessage) {
+        showToast('✅ Saved to Firestore.');
+      }
+      return true;
+    } catch (error) {
+      if (showMessage) showToast('❌ Save failed.');
+      console.error('[Save] Draft save exception:', error);
+      return false;
+    } finally {
+      isDraftSavingRef.current = false;
+    }
+  };
+
   // Action handlers
-  const handleSave = () => {
-    if (!workspaceRef.current) return;
-    const state = window.Blockly.serialization.workspaces.save(workspaceRef.current);
-    localStorage.setItem(LS_KEY, JSON.stringify(state));
-    showToast('Saved locally.');
+  const handleSave = async () => {
+    await saveWorkspaceSnapshot({ showMessage: true, saveType: 'manual' });
   };
 
   const handleRun = async () => {
@@ -439,16 +483,7 @@ function Studio() {
     }
 
     // localStorage에서 현재 문제 ID 가져오기
-    let questionId = 'default-question';
-    try {
-      const saved = localStorage.getItem('BlockHunt_current_question');
-      if (saved) {
-        const q = JSON.parse(saved);
-        questionId = q.id || 'default-question';
-      }
-    } catch (e) {
-      console.error('Failed to load question ID:', e);
-    }
+    const { questionId } = getCurrentQuestionInfo();
 
     setIsSubmitting(true);
 
@@ -485,6 +520,41 @@ function Studio() {
       document.body.classList.remove('studio');
     };
   }, []);
+
+  // Firestore 저장본 복구 (없으면 기존 localStorage 상태 유지)
+  useEffect(() => {
+    const restoreWorkspaceDraft = async () => {
+      if (!currentUser || !workspaceRef.current) return;
+
+      const { questionId } = getCurrentQuestionInfo();
+      const result = await getWorkspaceDraft(currentUser.uid, questionId);
+      if (!result.success || !result.data?.workspaceState) return;
+
+      try {
+        window.Blockly.serialization.workspaces.load(
+          result.data.workspaceState,
+          workspaceRef.current
+        );
+        localStorage.setItem(LS_KEY, JSON.stringify(result.data.workspaceState));
+        setPyCode(getPython());
+      } catch (error) {
+        console.warn('Failed to restore Firestore workspace draft:', error);
+      }
+    };
+
+    restoreWorkspaceDraft();
+  }, [currentUser, blocksLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 10초 간격 자동 저장 (Firestore + localStorage)
+  useEffect(() => {
+    if (!currentUser || !workspaceRef.current) return;
+
+    const timer = setInterval(() => {
+      saveWorkspaceSnapshot({ showMessage: false, saveType: 'auto' });
+    }, 10000);
+
+    return () => clearInterval(timer);
+  }, [currentUser, blocksLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <>
