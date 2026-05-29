@@ -19,6 +19,7 @@ import {
   gradeSubmission
 } from '../firebase/firestore';
 import useToast from '../hooks/useToast';
+import { BLOCKS_WITHOUT_GLTF } from '../utils/migrateBlocks';
 
 function Admin() {
   const [activeTab, setActiveTab] = useState('submissions');
@@ -285,12 +286,8 @@ function Admin() {
     }
   };
 
-  // 어드민에서 숨길 블록 ID 목록 (항상 default로 처리, Studio에서만 사용)
-  const HIDDEN_BLOCK_IDS = [
-    'procedures_defreturn',  // function with return
-    'procedures_ifreturn',   // if return
-    'variables_set'          // set variable
-  ];
+  // GLTF 없음 — QR·어드민 목록에서 제외 (BLOCKS_WITHOUT_GLTF와 동일)
+  const HIDDEN_BLOCK_IDS = BLOCKS_WITHOUT_GLTF;
   
   // 카테고리별 블록 그룹화 (어드민에서 숨길 블록 제외)
   const groupBlocksByCategory = (blocks) => {

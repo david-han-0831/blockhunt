@@ -632,17 +632,11 @@ export async function testMultipleBlocks(blockTypes = ['text_print', 'math_numbe
 }
 
 /**
- * 누락된 3개 블록만 SVG로 다운로드
- * - procedures_defreturn (function with return)
- * - procedures_ifreturn (if return)
- * - variables_set (set variable)
+ * GLTF 없는 블록 SVG 다운로드 (BLOCKS_WITHOUT_GLTF)
  */
 export async function downloadMissingBlocks() {
-  const missingBlocks = [
-    'procedures_defreturn',  // function with return
-    'procedures_ifreturn',   // if return
-    'variables_set'          // set variable
-  ];
+  const { BLOCKS_WITHOUT_GLTF } = await import('./migrateBlocks.js');
+  const missingBlocks = [...BLOCKS_WITHOUT_GLTF];
   
   // Studio 페이지의 workspace를 사용하려고 시도
   let workspace = null;

@@ -28,7 +28,7 @@ function QRTestModal({ isOpen, onClose, onScan }) {
           <textarea
             value={qrData}
             onChange={(e) => setQrData(e.target.value)}
-            placeholder='{"type":"blockhunt_blocks","qrId":"qr_abc123","blocks":["procedures_defnoreturn"],"timestamp":"2025-10-10T10:00:00.000Z"}'
+            placeholder='{"type":"blockhunt_blocks","qrId":"qr_abc123","blocks":["controls_if"],"timestamp":"2025-10-10T10:00:00.000Z"}'
             style={{
               width: '100%',
               height: '120px',

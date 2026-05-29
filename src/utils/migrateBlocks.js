@@ -10,6 +10,17 @@
 import { collection, doc, setDoc, getDocs } from 'firebase/firestore';
 import { db } from '../firebase/firebaseConfig';
 
+/**
+ * GLTF 3D 파일 없음 — QR 수집·어드민 목록에서 제외, Studio는 Blockly 기본 카테고리 사용
+ */
+export const BLOCKS_WITHOUT_GLTF = [
+  'variables_get',
+  'variables_set',
+  'procedures_defnoreturn',
+  'procedures_defreturn',
+  'procedures_ifreturn',
+];
+
 // 전체 블록 카탈로그 정의
 export const INITIAL_BLOCKS = [
   // Logic (5개)
@@ -51,13 +62,13 @@ export const INITIAL_BLOCKS = [
   { id: 'lists_getIndex', name: 'get item', category: 'Lists', icon: 'bi-list-ul', isDefaultBlock: false },
   
   // Variables (2개)
-  { id: 'variables_get', name: 'get variable', category: 'Variables', icon: 'bi-box', isDefaultBlock: true },
-  { id: 'variables_set', name: 'set variable', category: 'Variables', icon: 'bi-box', isDefaultBlock: true }, // 항상 default, 어드민에서 숨김
+  { id: 'variables_get', name: 'get variable', category: 'Variables', icon: 'bi-box', isDefaultBlock: true }, // GLTF 없음, 어드민에서 숨김
+  { id: 'variables_set', name: 'set variable', category: 'Variables', icon: 'bi-box', isDefaultBlock: true }, // GLTF 없음, 어드민에서 숨김
   
   // Functions (3개)
-  { id: 'procedures_defnoreturn', name: 'define function', category: 'Functions', icon: 'bi-gear', isDefaultBlock: false },
-  { id: 'procedures_defreturn', name: 'function with return', category: 'Functions', icon: 'bi-gear', isDefaultBlock: true }, // 항상 default, 어드민에서 숨김
-  { id: 'procedures_ifreturn', name: 'if return', category: 'Functions', icon: 'bi-gear', isDefaultBlock: true } // 항상 default, 어드민에서 숨김
+  { id: 'procedures_defnoreturn', name: 'define function', category: 'Functions', icon: 'bi-gear', isDefaultBlock: true }, // GLTF 없음, 어드민에서 숨김
+  { id: 'procedures_defreturn', name: 'function with return', category: 'Functions', icon: 'bi-gear', isDefaultBlock: true }, // GLTF 없음, 어드민에서 숨김
+  { id: 'procedures_ifreturn', name: 'if return', category: 'Functions', icon: 'bi-gear', isDefaultBlock: true } // GLTF 없음, 어드민에서 숨김
 ];
 
 /**
@@ -239,15 +250,12 @@ export const updateBlockSetting = async (blockId, isDefaultBlock) => {
 };
 
 /**
- * 특정 3개 블록을 default로 설정 (어드민에서 숨김 처리용)
- * - procedures_defreturn
- * - procedures_ifreturn
- * - variables_set
+ * GLTF 없는 블록을 Firestore에서 default로 동기화 (어드민 숨김·QR 제외)
  */
 export const updateHiddenBlocksToDefault = async () => {
-  const hiddenBlockIds = ['procedures_defreturn', 'procedures_ifreturn', 'variables_set'];
+  const hiddenBlockIds = BLOCKS_WITHOUT_GLTF;
   
-  console.log('🔄 Updating 3 hidden blocks to default...');
+  console.log(`🔄 Updating ${hiddenBlockIds.length} blocks without GLTF to default...`);
   let successCount = 0;
   let errorCount = 0;
   const errors = [];
@@ -280,6 +288,7 @@ export const updateHiddenBlocksToDefault = async () => {
 
 // 기본 내보내기
 const migrateBlocksModule = {
+  BLOCKS_WITHOUT_GLTF,
   INITIAL_BLOCKS,
   migrateBlocksToFirestore,
   migrateBlocksToFirestoreWithProgress,

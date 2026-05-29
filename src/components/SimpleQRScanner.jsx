@@ -124,7 +124,7 @@ function SimpleQRScanner({ onScan, onClose }) {
                   <textarea 
                     className="form-control" 
                     rows="6"
-                    placeholder='{"type":"blockhunt_blocks","qrId":"qr_abc123","blocks":["procedures_defnoreturn","procedures_defreturn"],"timestamp":"2025-10-10T10:00:00.000Z"}'
+                    placeholder='{"type":"blockhunt_blocks","qrId":"qr_abc123","blocks":["logic_operation","controls_whileUntil"],"timestamp":"2025-10-10T10:00:00.000Z"}'
                     value={qrData}
                     onChange={(e) => setQrData(e.target.value)}
                     required
